@@ -1,0 +1,90 @@
+{
+  "corpus": "/absolute/path/to/approved-corpus.jsonl",
+  "queries": "/absolute/path/to/judged-queries.jsonl",
+  "output": "/absolute/path/to/poc-reports/text-retrieval-cloud-poc",
+  "cloud_gate_repetitions": 20,
+  "tokenizer": {
+    "type": "huggingface",
+    "pretrained_name_or_path": "/absolute/path/to/pinned-tokenizer",
+    "revision": "pin-at-run-time",
+    "local_files_only": true,
+    "trust_remote_code": false
+  },
+  "engines": {
+    "aliyun_elasticsearch": {
+      "endpoint_env": "VERITYMESH_ES_ENDPOINT",
+      "username_env": "VERITYMESH_ES_USERNAME",
+      "password_env": "VERITYMESH_ES_PASSWORD",
+      "index_prefix": "veritymesh-poc",
+      "verify_tls": true,
+      "timeout_seconds": 30,
+      "index_analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart",
+      "analysis_profile_version": "bm25-multifield-ik-v1",
+      "dictionary_fingerprint": "pin-release-dictionary-sha256",
+      "synonym_fingerprint": "pin-release-synonym-sha256"
+    },
+    "aliyun_opensearch_vector": {
+      "endpoint_env": "VERITYMESH_OPENSEARCH_ENDPOINT",
+      "instance_id_env": "VERITYMESH_OPENSEARCH_INSTANCE_ID",
+      "access_user_name_env": "VERITYMESH_OPENSEARCH_USERNAME",
+      "access_pass_word_env": "VERITYMESH_OPENSEARCH_PASSWORD",
+      "data_source_name_env": "VERITYMESH_OPENSEARCH_DATA_SOURCE",
+      "table_name_env": "VERITYMESH_OPENSEARCH_TABLE",
+      "key_field": "chunk_id",
+      "vector_field": "vector",
+      "namespace": "default",
+      "timeout_seconds": 30
+    }
+  },
+  "embeddings": {
+    "qwen3_7_text_embedding": {
+      "model": "qwen3.7-text-embedding",
+      "dimension": 1024,
+      "region": "cn-beijing",
+      "api_key_env": "DASHSCOPE_API_KEY",
+      "api_mode": "native",
+      "revision": "pin-at-run-time",
+      "query_instruction": "",
+      "document_instruction": "",
+      "query_max_tokens": 512,
+      "document_max_tokens": 1024
+    },
+    "text_embedding_v4": {
+      "model": "text-embedding-v4",
+      "dimension": 1024,
+      "region": "cn-beijing",
+      "api_key_env": "DASHSCOPE_API_KEY",
+      "api_mode": "native",
+      "revision": "pin-at-run-time",
+      "query_instruction": "",
+      "document_instruction": "",
+      "query_max_tokens": 512,
+      "document_max_tokens": 1024
+    }
+  },
+  "rerankers": {
+    "qwen3_rerank": {
+      "model": "qwen3-rerank",
+      "revision": "pin-at-run-time",
+      "region": "cn-beijing",
+      "api_key_env": "DASHSCOPE_API_KEY",
+      "api_mode": "native",
+      "timeout_seconds": 1.0,
+      "query_max_tokens": 512,
+      "document_max_tokens": 1024,
+      "max_documents": 50
+    },
+    "gte_rerank_v2": {
+      "model": "gte-rerank-v2",
+      "revision": "pin-at-run-time",
+      "region": "cn-beijing",
+      "api_key_env": "DASHSCOPE_API_KEY",
+      "api_mode": "native",
+      "timeout_seconds": 1.0,
+      "query_max_tokens": 512,
+      "document_max_tokens": 1024,
+      "max_documents": 50
+    }
+  }
+}

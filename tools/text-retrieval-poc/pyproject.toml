@@ -1,0 +1,23 @@
+[project]
+name = "veritymesh-text-retrieval-poc"
+version = "0.1.0"
+description = "Reproducible text retrieval stack PoC for VerityMesh"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+aliyun-opensearch = ["alibabacloud-ha3engine-vector==1.1.19"]
+tokenizer = ["transformers>=4.50"]
+
+[project.scripts]
+veritymesh-retrieval-poc = "veritymesh_poc.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
