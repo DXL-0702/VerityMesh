@@ -1,0 +1,63 @@
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+
+# Logs, caches, and temporary files
+*.log
+*.tmp
+.cache/
+tmp/
+
+# JavaScript / Vue
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+.vite/
+dist/
+coverage/
+
+# Java / Spring Boot
+.gradle/
+**/build/
+**/target/
+out/
+*.class
+
+# Python / uv
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local PoC inputs and disposable reports
+tools/text-retrieval-poc/config.json
+tools/text-retrieval-poc/config.local.json
+poc-reports/local/
+poc-reports/.tmp/
