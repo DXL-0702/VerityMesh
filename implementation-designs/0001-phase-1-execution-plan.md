@@ -2,15 +2,16 @@
 
 | 属性 | 内容 |
 | --- | --- |
-| 状态 | `DRAFT` |
-| 文档类型 | 第一阶段实施与交付拆分草案 |
+| 状态 | `ACCEPTED` |
+| 文档类型 | 第一阶段实施与交付拆分基线 |
 | 适用范围 | 阶段 `1A + 1B + 1C` |
 | 架构事实源 | [`../tech-plan.md`](../tech-plan.md)、[`../architecture.md`](../architecture.md) |
 | 架构决策 | [`../adr/0001-constrained-rag-kernel-and-model-access.md`](../adr/0001-constrained-rag-kernel-and-model-access.md)、[`../adr/0002-java-platform-and-python-ai-runtime.md`](../adr/0002-java-platform-and-python-ai-runtime.md) |
 | 外部依赖状态 | [`../technology-selection/technology-selection.md`](../technology-selection/technology-selection.md) |
+| 具体执行路线 | [`0002-phase-1-seven-day-execution-route.md`](0002-phase-1-seven-day-execution-route.md) |
 | 最后更新 | 2026-08-11 |
 
-本文把已经冻结的第一阶段架构拆成可开发、可集成、可验收的交付批次。本文不修改 `tech-plan.md`、ADR 或技术选型状态；外部产品仍以技术选型索引为唯一事实源。草案经审阅后才能作为执行基线，本文中的提交顺序不表示对应产品已经完成选型。
+本文已经审核接受，负责把冻结的第一阶段架构拆成可开发、可集成、可验收的交付批次。本文不修改 `tech-plan.md`、ADR 或技术选型状态；外部产品仍以技术选型索引为唯一事实源，本文中的提交顺序不表示对应产品已经完成选型。
 
 ## 1. 目标与完成定义
 
@@ -329,7 +330,7 @@ Router、OAuth、Retrieval、Generation、Grounding、Citation、Release 和 Rev
 
 ## 9. 交付批次与依赖顺序
 
-以下批次是建议执行顺序，不是对任何尚未完成选型的自动批准。批次可在合同稳定后并行，但退出门禁不能跳过。
+以下批次是已经接受的交付分解，不是对任何尚未完成选型的自动批准。七天内的并行编排、每日产物和退出门禁见 [`0002-phase-1-seven-day-execution-route.md`](0002-phase-1-seven-day-execution-route.md)。批次可在合同稳定后并行，但退出门禁不能跳过。
 
 | 批次 | 主要目标 | 前端 | Java 后端 | 在线 AI | 批处理 / 数据 / 基础设施 | 退出门禁 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -482,12 +483,11 @@ P1-00
 - 在 [`../runbooks/`](../runbooks/) 中为发布、回滚、紧急撤回、Grant/Client 撤销、Kafka/Celery 积压、模型故障、数据恢复和索引重建建立经过演练的操作手册。
 - 第一阶段上线前冻结容量输入、月度成本预算、数据保留、审计保留、RPO/RTO 和事故响应职责。
 
-## 13. 方案审阅后产生的下一步
+## 13. 执行交接
 
-本草案获批后，按以下顺序把计划转为可执行工程任务：
+本方案已经完成审核。具体实施以 [`0002-phase-1-seven-day-execution-route.md`](0002-phase-1-seven-day-execution-route.md) 为当前执行入口，并遵守以下约束：
 
-1. 冻结 `P1-00` 的合同清单、Schema 所有者、兼容策略和测试夹具。
-2. 为 `P1-01~P1-11` 分别建立交付说明，写明输入、输出、Owner、依赖、验收命令和关联选型门禁。
-3. 优先关闭会阻断 `P1-01~P1-03` 的 PostgreSQL、Kafka、Redis、Elasticsearch、Parser/OCR/安全和模型真实环境 PoC。
-4. 建立第一阶段密封评测资产和安全矩阵，避免实现完成后才补验收口径。
-5. 只有在相应批次的合同、外部依赖门禁和测试入口明确后，才进入该批次实现。
+1. `P1-00~P1-11` 的范围、跨层所有权和验收门禁保持不变，七天路线只压缩等待与串行时间，不删减功能或安全不变量。
+2. 开始 Day 1 前必须关闭执行路线的 Day 0 入场条件；未满足时不能把等待外部资源的时间伪装成开发进度。
+3. 每个交付批次必须保留输入、输出、Owner、依赖、验收命令和关联选型门禁的执行记录。
+4. 改变阶段范围、系统边界或第一阶段完成定义时，先回到 `tech-plan.md`、ADR 和本方案评审，不在七天路线中暗改。
