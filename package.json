@@ -1,0 +1,31 @@
+{
+  "name": "veritymesh",
+  "version": "0.0.0",
+  "private": true,
+  "description": "VerityMesh non-Java workspace",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": "24.19.0",
+    "pnpm": "10.33.0"
+  },
+  "scripts": {
+    "build": "pnpm --recursive --if-present run build",
+    "dev:portal": "pnpm --filter @veritymesh/portal-web run dev",
+    "format:check": "prettier --check \".github/**/*.yml\" \"apps/portal-web/**/*.{css,html,json,ts,vue}\" \"packages/**/*.{json,ts,vue}\" \"*.{json,mjs,yaml}\" \"tsconfig.base.json\"",
+    "lint": "eslint . --max-warnings 0",
+    "test": "pnpm --recursive --if-present run test",
+    "typecheck": "pnpm --recursive --if-present run typecheck",
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@playwright/test": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-vue": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

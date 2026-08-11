@@ -79,7 +79,7 @@
 | `DATA-020` | 数据 | PolarDB PostgreSQL/pgvector 候选 | Product | `UNSELECTED` | 阿里云 PolarDB PostgreSQL | [关系数据库](data/relational-database-selection.md) | 先核实目标版本 pgvector 与索引能力，再做同条件 PoC | 2026-08-11 |
 | `DATA-021` | 数据 | ACK 自建 PostgreSQL/pgvector | Product Form | `REJECTED` | 第一阶段不采用 | [关系数据库](data/relational-database-selection.md) | 所有托管候选存在硬缺口时重新立项 | 2026-08-11 |
 | `DATA-022` | 数据 | Java Schema Migration | Library | `SELECTED` | Flyway | [关系数据库](data/relational-database-selection.md) | 锁定版本并关闭空库、N-1、重试和滚动兼容测试 | 2026-08-11 |
-| `DATA-023` | 数据 | Python Schema Migration | Library | `SELECTED` | Alembic | [关系数据库](data/relational-database-selection.md) | 由 `uv.lock` 锁定版本并关闭单一 Head、N-1 和重试测试 | 2026-08-11 |
+| `DATA-023` | 数据 | Python Schema Migration | Library | `SELECTED` | Alembic `1.18.5` | [关系数据库](data/relational-database-selection.md) | 关闭单一 Head、空库、N-1、重试和滚动兼容测试 | 2026-08-11 |
 | `RET-001` | 检索 | 首期 BM25 搜索引擎 | Product Class | `CONFIRMED_WITH_GATES` | 阿里云 Elasticsearch 8.17 | [搜索引擎](retrieval/search-engine-selection.md) | 真实企业语料与隔离云实例关闭质量、权限、容量、成本和退出门禁 | 2026-08-11 |
 | `RET-002` | 检索 | 阿里云 Elasticsearch 主候选 | Product | `CONFIRMED_WITH_GATES` | 阿里云 Elasticsearch 8.17，仅 BM25 Projection | [搜索引擎](retrieval/search-engine-selection.md) | 完成真实实例 BM25 矩阵及撤回、删除、回滚合同验证 | 2026-08-11 |
 | `RET-003` | 检索 | 阿里云 OpenSearch 挑战者 | Product | `CHALLENGER_POC` | 阿里云 OpenSearch，具体文本检索产品形态待定 | [搜索引擎](retrieval/search-engine-selection.md) | 与 Elasticsearch 使用同一 BM25 语料和硬门禁完成真实实例 PoC | 2026-08-11 |

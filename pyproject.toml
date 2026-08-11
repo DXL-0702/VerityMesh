@@ -1,0 +1,52 @@
+[project]
+name = "veritymesh-python-workspace"
+version = "0.0.0"
+description = "VerityMesh non-Java Python workspace"
+requires-python = "==3.12.*"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "hatchling==1.31.0",
+    "mypy==1.20.2",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.15.21",
+]
+
+[tool.uv]
+package = false
+required-version = "==0.11.13"
+
+[tool.uv.workspace]
+members = [
+    "services/assistant-runtime",
+    "services/batch-worker",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+pretty = true
+
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=veritymesh_assistant_runtime",
+    "--cov=veritymesh_batch_worker",
+    "--cov-report=term-missing",
+    "--cov-fail-under=100",
+]
+testpaths = [
+    "services/assistant-runtime/tests",
+    "services/batch-worker/tests",
+]

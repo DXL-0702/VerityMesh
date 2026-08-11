@@ -15,11 +15,28 @@ ARCHITECTURE = ROOT / ARCHITECTURE_RELATIVE
 REQUIRED_PATHS = (
     Path("README.md"),
     Path("CONTRIBUTING.md"),
+    Path(".github/workflows/verify.yml"),
+    Path(".node-version"),
+    Path(".npmrc"),
+    Path(".python-version"),
+    Path("package.json"),
+    Path("pnpm-workspace.yaml"),
+    Path("pnpm-lock.yaml"),
+    Path("pyproject.toml"),
+    Path("uv.lock"),
+    Path("tsconfig.base.json"),
+    Path("eslint.config.mjs"),
+    Path("prettier.config.mjs"),
+    Path("apps/portal-web/package.json"),
     Path("apps/portal-web/README.md"),
     Path("services/platform-api/README.md"),
+    Path("services/assistant-runtime/pyproject.toml"),
     Path("services/assistant-runtime/README.md"),
+    Path("services/batch-worker/pyproject.toml"),
     Path("services/batch-worker/README.md"),
+    Path("packages/assistant-ui/package.json"),
     Path("packages/assistant-ui/README.md"),
+    Path("packages/typescript-client/package.json"),
     Path("packages/typescript-client/README.md"),
     Path("contracts/README.md"),
     Path("infra/README.md"),
@@ -29,10 +46,13 @@ REQUIRED_PATHS = (
     ARCHITECTURE_RELATIVE,
     Path("docs/adr/README.md"),
     Path("docs/implementation-designs/README.md"),
+    Path("docs/implementation-designs/0003-non-java-workspace-toolchain-baseline.md"),
     Path("docs/technology-selection/technology-selection.md"),
     Path("docs/poc-reports/README.md"),
     Path("docs/runbooks/README.md"),
     Path("tools/verify-repository.sh"),
+    Path("tools/verify-frontend.sh"),
+    Path("tools/verify-python.sh"),
 )
 LEGACY_DOCUMENT_PATHS = (
     Path("architecture.md"),
@@ -42,6 +62,31 @@ LEGACY_DOCUMENT_PATHS = (
     Path("technology-selection"),
     Path("poc-reports"),
     Path("runbooks"),
+)
+DEFERRED_JAVA_TOOLCHAIN_PATHS = (
+    Path(".java-version"),
+    Path(".mvn"),
+    Path("gradle"),
+    Path("gradlew"),
+    Path("gradlew.bat"),
+    Path("mvnw"),
+    Path("mvnw.cmd"),
+    Path("pom.xml"),
+    Path("build.gradle"),
+    Path("build.gradle.kts"),
+    Path("settings.gradle"),
+    Path("settings.gradle.kts"),
+    Path("services/platform-api/.mvn"),
+    Path("services/platform-api/gradle"),
+    Path("services/platform-api/gradlew"),
+    Path("services/platform-api/gradlew.bat"),
+    Path("services/platform-api/mvnw"),
+    Path("services/platform-api/mvnw.cmd"),
+    Path("services/platform-api/pom.xml"),
+    Path("services/platform-api/build.gradle"),
+    Path("services/platform-api/build.gradle.kts"),
+    Path("services/platform-api/settings.gradle"),
+    Path("services/platform-api/settings.gradle.kts"),
 )
 MARKDOWN_LINK = re.compile(
     r"!?\[[^\]]*\]\((?P<target><[^>]+>|[^)\s]+)(?:\s+['\"][^)]*['\"])?\)"
@@ -83,6 +128,11 @@ def check_repository_layout() -> list[str]:
     failures.extend(
         f"legacy documentation path must move under docs/: {path.as_posix()}"
         for path in LEGACY_DOCUMENT_PATHS
+        if (ROOT / path).exists()
+    )
+    failures.extend(
+        f"Java toolchain remains unselected; remove unapproved path: {path.as_posix()}"
+        for path in DEFERRED_JAVA_TOOLCHAIN_PATHS
         if (ROOT / path).exists()
     )
     return failures

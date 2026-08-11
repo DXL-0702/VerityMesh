@@ -232,7 +232,7 @@ VerityMesh/
 `-- tools/                       # 仓库验证、代码生成与可重复 PoC 工具
 ```
 
-目录骨架只冻结组件所有权，不表示应用已经初始化完成。前端包管理器、Node、Java 构建工具、JDK 和 Schema 生成方式通过开工前检查后，才在对应目录创建正式工程清单与锁文件。目录边界说明见 [`docs/README.md`](docs/README.md)。
+非 Java 工作区已经完成可构建基线初始化，版本与保留边界见 [`非 Java 工作区工具链基线`](docs/implementation-designs/0003-non-java-workspace-toolchain-baseline.md)。Java 构建工具、JDK、Spring Boot/Flyway 具体版本和 Java Schema 生成方式继续待定，`platform-api` 尚未创建工程清单；这次初始化不表示 Day 1 已开始。目录边界说明见 [`docs/README.md`](docs/README.md)。
 
 ## 文档导航
 
@@ -249,12 +249,14 @@ VerityMesh/
 
 ## 仓库验证
 
-提交前运行：
+提交前分别运行：
 
 ```sh
 ./tools/verify-repository.sh
+./tools/verify-frontend.sh
+./tools/verify-python.sh
 ```
 
-该命令检查 Monorepo 目录边界、Markdown 本地链接、`docs/architecture.md` 的有向连通性，并运行文本检索 PoC 的单元测试和本地合同验证。云端 PoC 需要显式配置和批准，不属于默认仓库验证。
+仓库验证检查 Monorepo 目录边界、Markdown 本地链接、`docs/architecture.md` 的有向连通性，并运行文本检索 PoC 的单元测试和本地合同验证；另外两个入口分别完成前端和 Python 的锁定安装、格式、静态检查、测试与构建验证。Java 工具链尚未建立，因此当前没有伪装成全仓已验证的 `verify-all.sh`。云端 PoC 需要显式配置和批准，不属于默认仓库验证。
 
 协作与提交规则见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。

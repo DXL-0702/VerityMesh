@@ -9,6 +9,7 @@
 | 第 7 天输出 | 第一阶段开发完成，生成可部署、可回滚、可验证的待发布候选版本 |
 | 当前下一步 | 完成第 3 节“开工前检查”，全部通过后记录第 1 天开始日期 |
 | 详细范围与门禁 | [第一阶段执行方案](0001-phase-1-execution-plan.md) |
+| 工作区工具链 | [非 Java 工作区工具链基线](0003-non-java-workspace-toolchain-baseline.md)；Java 工具链继续待定 |
 | 架构依据 | [tech-plan.md](../tech-plan.md)、[architecture.md](../architecture.md) |
 | 最后更新 | 2026-08-11 |
 
@@ -80,6 +81,8 @@
 | 当日决策人 | 产品范围、外部账号、安全事件和不可逆操作均有当天可以响应的决策人 | 阻断问题不得悬空过夜 |
 
 通过规则只有一条：十项全部通过才开始计算七天。部分通过不等于已经开工。
+
+截至 2026-08-11，Node/pnpm 与 Python/uv 工作区版本已经固定并初始化，但 Java 构建工具、JDK、Spring Boot/Flyway 具体版本和 Java Schema 生成方式仍未确定。因此“工具版本”这一整项尚未通过，项目状态继续保持 `NOT_STARTED`。
 
 ## 4. 七天总览
 
