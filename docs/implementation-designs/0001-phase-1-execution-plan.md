@@ -70,7 +70,7 @@
 | `docs/` | 架构、ADR、技术选型、实施方案、PoC 证据与 Runbook |
 | `tools/` | 仓库验证、代码生成和可重复 PoC 工具 |
 
-根目录只保留仓库入口、协作契约和全局工具配置。非 Java 工程清单与锁文件已按 [`非 Java 工作区工具链基线`](0003-non-java-workspace-toolchain-baseline.md) 建立；Java 工具链、Java 工程清单和跨语言生成配置继续待定。工作区初始化不代表 Day 1 已开始。
+根目录只保留仓库入口、协作契约和全局工具配置。前端、Python 与 Java 工程基线已经初始化，版本统一见 [`技术栈与外部选型总览`](../technology-selection/technology-selection.md)，可执行版本由各工作区 Manifest、锁文件和 Wrapper 固定。正式跨语言 Schema 与代码生成配置仍由 `P1-00` 交付；工程初始化不代表 Day 1 已开始。
 
 ## 3. 跨层合同优先
 

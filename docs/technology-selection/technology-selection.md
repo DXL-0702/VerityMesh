@@ -1,15 +1,15 @@
-# 外部技术选型总索引
+# VerityMesh 技术栈与外部选型总览
 
 | 属性 | 内容 |
 | --- | --- |
-| 文档版本 | 3.2 |
+| 文档版本 | 3.3 |
 | 基线日期 | 2026-08-11 |
 | 架构基线 | [`../tech-plan.md`](../tech-plan.md) |
-| 文档定位 | 外部依赖选型图的统一导航、状态登记与下一决策索引 |
+| 文档定位 | 整个项目技术栈总览，以及外部依赖的状态登记与下一决策索引 |
 
 ## 1. 边界
 
-本目录只回答“依赖什么外部产品、服务、模型或第三方库，当前选了什么，决策到什么程度”。每份专项文档使用同一张选型表，不保存接口、数据结构、状态机、数据流、迁移步骤、服务目标、部署参数或故障处理。
+本文件先用一张表回答“整个项目采用什么技术栈”，再登记需要持续跟踪的外部产品、服务、模型和第三方依赖。它不保存接口、数据结构、状态机、数据流、迁移步骤、服务目标、部署参数或故障处理。
 
 详细内容按以下位置维护：
 
@@ -22,9 +22,25 @@
 | 部署、升级、恢复和排障步骤 | [`../runbooks/`](../runbooks/) |
 | 改变架构边界的重大决策及权衡 | [`../adr/`](../adr/) |
 
-内部服务、协议和算法不是外部依赖。例如 Model Access Service、Provider Adapter、REST/OpenAPI/SSE、BM25 + Vector + RRF、Grounding L0 只在架构中定义；专项选型图仅登记它们所依赖的外部产品。表格中的“备选/回退”可以引用这些内部能力，用于解释未引入外部产品时系统依靠什么运行，但不得把它们登记为已选外部产品。
+内部服务、协议和算法不是外部依赖。例如 Model Access Service、Provider Adapter、REST/OpenAPI/SSE、BM25 + Vector + RRF、Grounding L0 只在架构中定义；选型索引仅登记它们所依赖的外部产品。
 
-## 2. 状态定义
+## 2. 项目技术栈总览
+
+| 层次 | 当前技术栈 | 关键边界 | 当前状态 |
+| --- | --- | --- | --- |
+| 前端体验层 | Node `24.19.0`、pnpm `10.33.0`、Vue `3.5.41`、TypeScript `5.9.3`、Vite `7.3.6` | `portal-web`、`assistant-ui` 和 TypeScript Client 共用 pnpm Workspace；不建设 React Adapter | 工程基线已冻结 |
+| Java 平台层 | Temurin OpenJDK `21.0.12+8`、Maven `3.9.16` + Wrapper `3.3.4`、Spring Boot `4.1.0`；MVC/Tomcat、WebClient、JPA/Hibernate/HikariCP、Security Resource Server/Nimbus、Flyway `12.4.0`、SpringDoc `3.1.0`、SLF4J/Logback | WebClient 只负责出站调用；不引入 WebFlux Server、JJWT 或 Knife4j | 工程基线已冻结；合同代码生成待 `P1-00` 验证 |
+| 在线 AI 层 | Python `3.12.13`、uv `0.11.13`、FastAPI `0.139.0`、Pydantic `2.13.4`、Uvicorn `0.51.0` | 自研受约束 RAG Domain Kernel；第一阶段不使用 LangChain、LangGraph 或 MaxKB Runtime 持有领域边界 | 工程基线已冻结 |
+| 知识批处理层 | Python/uv、Celery `5.6.3`、SQLAlchemy `2.0.51`、Alembic `1.18.5`、psycopg `3.3.4`、pgvector Client `0.5.0` | 负责解析、Chunk、Embedding、批量投影和评测；不拥有业务状态机 | 工程基线已冻结 |
+| 数据与事件层 | MySQL、阿里云 OSS、Kafka、Redis Online、Redis Celery | MySQL 是 Java 业务权威库，OSS 是内容资产事实源，Kafka 是可重放领域事件；两类 Redis 隔离 | 技术方向已冻结，具体托管产品与版本仍有待定项 |
+| 检索层 | Elasticsearch `8.17` BM25 + PostgreSQL/pgvector Vector + Domain RRF + Reranker | Elasticsearch 不保存 Dense Vector；pgvector 只保存可重建向量投影 | 联合架构已冻结，生产产品门禁尚未关闭 |
+| 模型层 | 阿里云百炼主平台、火山方舟跨云备供；`qwen3.7-text-embedding`、`qwen3-rerank` 为当前主候选 | 模型通过 Provider Adapter 接入；固定 Revision、质量、容量、成本和合同门禁仍需验证 | 部分确认，详见下方索引 |
+| 合同层 | OpenAPI `3.1`、JSON Schema `2020-12`、AsyncAPI `3`、REST/SSE | `contracts/` 是跨语言事实源；SpringDoc 只展示 Java 实现视图 | 格式已冻结，正式 Schema 与代码生成器待 P1-00 |
+| 部署层 | 阿里云 ACK + KEDA；`portal-web`、`platform-api`、`assistant-runtime`、`batch-worker` 四个 Deployment | Java 保持模块化单体；在线 AI 与离线 Worker 独立扩缩容和故障隔离 | 部署粒度已冻结，Region、SKU 和容量待定 |
+
+精确包版本以仓库 Manifest、锁文件和 Maven Wrapper 为可执行事实；下方索引继续负责区分 `SELECTED`、PoC、待定、延后和拒绝状态。
+
+## 3. 状态定义
 
 | 状态 | 含义 |
 | --- | --- |
@@ -39,7 +55,7 @@
 
 状态绑定到精确 Decision ID，不能从上级类别推导。例如 `MySQL = SELECTED` 不代表 `RDS MySQL = SELECTED`，`PostgreSQL + pgvector = SELECTED` 也不代表某个托管产品已经通过真实实例门禁。
 
-## 3. 选型索引
+## 4. 选型索引
 
 | Decision ID | 技术域 | 外部依赖 | 决策层级 | 当前状态 | 当前选择 | 专项文档 | 下一决策 | 最后更新 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -78,7 +94,7 @@
 | `DATA-019` | 数据 | RDS PostgreSQL/pgvector 候选 | Product | `UNSELECTED` | 阿里云 RDS PostgreSQL | [关系数据库](data/relational-database-selection.md) | 核实扩展、索引、HA、扩容和成本 | 2026-08-11 |
 | `DATA-020` | 数据 | PolarDB PostgreSQL/pgvector 候选 | Product | `UNSELECTED` | 阿里云 PolarDB PostgreSQL | [关系数据库](data/relational-database-selection.md) | 先核实目标版本 pgvector 与索引能力，再做同条件 PoC | 2026-08-11 |
 | `DATA-021` | 数据 | ACK 自建 PostgreSQL/pgvector | Product Form | `REJECTED` | 第一阶段不采用 | [关系数据库](data/relational-database-selection.md) | 所有托管候选存在硬缺口时重新立项 | 2026-08-11 |
-| `DATA-022` | 数据 | Java Schema Migration | Library | `SELECTED` | Flyway | [关系数据库](data/relational-database-selection.md) | 锁定版本并关闭空库、N-1、重试和滚动兼容测试 | 2026-08-11 |
+| `DATA-022` | 数据 | Java Schema Migration | Library | `SELECTED` | Flyway `12.4.0`，由 Spring Boot `4.1.0` BOM 管理 | [关系数据库](data/relational-database-selection.md) | 关闭空库、N-1、重试和滚动兼容测试 | 2026-08-11 |
 | `DATA-023` | 数据 | Python Schema Migration | Library | `SELECTED` | Alembic `1.18.5` | [关系数据库](data/relational-database-selection.md) | 关闭单一 Head、空库、N-1、重试和滚动兼容测试 | 2026-08-11 |
 | `RET-001` | 检索 | 首期 BM25 搜索引擎 | Product Class | `CONFIRMED_WITH_GATES` | 阿里云 Elasticsearch 8.17 | [搜索引擎](retrieval/search-engine-selection.md) | 真实企业语料与隔离云实例关闭质量、权限、容量、成本和退出门禁 | 2026-08-11 |
 | `RET-002` | 检索 | 阿里云 Elasticsearch 主候选 | Product | `CONFIRMED_WITH_GATES` | 阿里云 Elasticsearch 8.17，仅 BM25 Projection | [搜索引擎](retrieval/search-engine-selection.md) | 完成真实实例 BM25 矩阵及撤回、删除、回滚合同验证 | 2026-08-11 |
@@ -148,7 +164,7 @@
 | `OBS-005` | 可观测性 | Dashboard | Product | `UNSELECTED` | 运维与项目视图 | [事件响应集成](observability/incident-response-integration-selection.md) | 与观测后端联合选型 | 2026-08-05 |
 | `OBS-006` | 可观测性 | On-call / 事件响应集成 | Product | `UNSELECTED` | 告警处置闭环 | [事件响应集成](observability/incident-response-integration-selection.md) | 先盘点企业现有系统 | 2026-08-05 |
 
-## 4. 目录导航
+## 5. 目录导航
 
 | 技术域 | 专项文档 |
 | --- | --- |
@@ -161,7 +177,7 @@
 | 内容治理 | [文档解析](governance/document-parser-selection.md)、[扫描工具](governance/malware-secret-scanner-selection.md)、[去重与切分](governance/deduplication-chunking-selection.md)、[数据源 Connector](governance/source-connector-selection.md) |
 | 可观测性 | [Telemetry](observability/telemetry-selection.md)、[观测后端](observability/observability-backend-selection.md)、[事件响应集成](observability/incident-response-integration-selection.md) |
 
-## 5. 更新规则
+## 6. 更新规则
 
 1. 每个可独立决策的外部依赖必须有唯一 Decision ID 和唯一专项选型图事实源。
 2. 新候选、状态变化、版本冻结或淘汰时，先更新专项图，再同步本索引的一行。

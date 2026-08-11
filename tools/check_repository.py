@@ -16,6 +16,7 @@ REQUIRED_PATHS = (
     Path("README.md"),
     Path("CONTRIBUTING.md"),
     Path(".github/workflows/verify.yml"),
+    Path(".java-version"),
     Path(".node-version"),
     Path(".npmrc"),
     Path(".python-version"),
@@ -30,6 +31,13 @@ REQUIRED_PATHS = (
     Path("apps/portal-web/package.json"),
     Path("apps/portal-web/README.md"),
     Path("services/platform-api/README.md"),
+    Path("services/platform-api/.mvn/wrapper/maven-wrapper.properties"),
+    Path("services/platform-api/mvnw"),
+    Path("services/platform-api/mvnw.cmd"),
+    Path("services/platform-api/pom.xml"),
+    Path("services/platform-api/src/main/java/com/veritymesh/platform/PlatformApiApplication.java"),
+    Path("services/platform-api/src/main/resources/application.properties"),
+    Path("services/platform-api/src/test/java/com/veritymesh/platform/PlatformApiToolchainTests.java"),
     Path("services/assistant-runtime/pyproject.toml"),
     Path("services/assistant-runtime/README.md"),
     Path("services/batch-worker/pyproject.toml"),
@@ -46,12 +54,12 @@ REQUIRED_PATHS = (
     ARCHITECTURE_RELATIVE,
     Path("docs/adr/README.md"),
     Path("docs/implementation-designs/README.md"),
-    Path("docs/implementation-designs/0003-non-java-workspace-toolchain-baseline.md"),
     Path("docs/technology-selection/technology-selection.md"),
     Path("docs/poc-reports/README.md"),
     Path("docs/runbooks/README.md"),
     Path("tools/verify-repository.sh"),
     Path("tools/verify-frontend.sh"),
+    Path("tools/verify-java.sh"),
     Path("tools/verify-python.sh"),
 )
 LEGACY_DOCUMENT_PATHS = (
@@ -63,8 +71,7 @@ LEGACY_DOCUMENT_PATHS = (
     Path("poc-reports"),
     Path("runbooks"),
 )
-DEFERRED_JAVA_TOOLCHAIN_PATHS = (
-    Path(".java-version"),
+FORBIDDEN_BUILD_PATHS = (
     Path(".mvn"),
     Path("gradle"),
     Path("gradlew"),
@@ -76,13 +83,9 @@ DEFERRED_JAVA_TOOLCHAIN_PATHS = (
     Path("build.gradle.kts"),
     Path("settings.gradle"),
     Path("settings.gradle.kts"),
-    Path("services/platform-api/.mvn"),
     Path("services/platform-api/gradle"),
     Path("services/platform-api/gradlew"),
     Path("services/platform-api/gradlew.bat"),
-    Path("services/platform-api/mvnw"),
-    Path("services/platform-api/mvnw.cmd"),
-    Path("services/platform-api/pom.xml"),
     Path("services/platform-api/build.gradle"),
     Path("services/platform-api/build.gradle.kts"),
     Path("services/platform-api/settings.gradle"),
@@ -131,10 +134,19 @@ def check_repository_layout() -> list[str]:
         if (ROOT / path).exists()
     )
     failures.extend(
-        f"Java toolchain remains unselected; remove unapproved path: {path.as_posix()}"
-        for path in DEFERRED_JAVA_TOOLCHAIN_PATHS
+        f"unsupported root or Gradle build path: {path.as_posix()}"
+        for path in FORBIDDEN_BUILD_PATHS
         if (ROOT / path).exists()
     )
+
+    wrapper = ROOT / "services/platform-api/mvnw"
+    if wrapper.exists() and not wrapper.stat().st_mode & 0o111:
+        failures.append("services/platform-api/mvnw must be executable")
+
+    java_version = ROOT / ".java-version"
+    if java_version.exists() and java_version.read_text(encoding="utf-8").strip() != "21.0.12":
+        failures.append(".java-version must pin the accepted 21.0.12 baseline")
+
     return failures
 
 

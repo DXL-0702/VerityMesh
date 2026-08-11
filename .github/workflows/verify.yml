@@ -67,3 +67,19 @@ jobs:
           enable-cache: true
       - name: Verify Python workspace
         run: ./tools/verify-python.sh
+
+  java:
+    name: Java platform API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+          cache: maven
+          cache-dependency-path: services/platform-api/pom.xml
+      - name: Verify Java platform API
+        run: ./tools/verify-java.sh

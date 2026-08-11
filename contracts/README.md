@@ -14,4 +14,4 @@
 
 合同必须保持语言独立，不共享 ORM、进程内 DTO、框架 Message 或 Provider SDK 类型。合同范围与生产者/消费者所有权见 [`第一阶段执行方案`](../docs/implementation-designs/0001-phase-1-execution-plan.md)。
 
-TypeScript、Python 和 Java 必须从同一版本化 Schema 生成类型。Java 工具链尚未确定，因此代码生成器和生成命令继续待定；格式与保留边界见 [`非 Java 工作区工具链基线`](../docs/implementation-designs/0003-non-java-workspace-toolchain-baseline.md)。
+TypeScript、Python 和 Java 必须从同一版本化 Schema 生成类型。具体代码生成器和生成命令仍由 `P1-00` 使用第一版正式 Schema 验证后固定；合同格式和当前工程技术栈见 [`技术栈与外部选型总览`](../docs/technology-selection/technology-selection.md)。

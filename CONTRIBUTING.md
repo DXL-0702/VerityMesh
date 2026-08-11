@@ -27,8 +27,9 @@
 ./tools/verify-repository.sh
 ./tools/verify-frontend.sh
 ./tools/verify-python.sh
+./tools/verify-java.sh
 ```
 
-默认验证不得访问云资源或修改外部状态。当前验证只覆盖仓库边界与非 Java 工作区；Java 工具链确定前不提供虚假的全仓通过入口。需要真实 Provider、Elasticsearch 或 OpenSearch 的 PoC 必须使用独立配置显式执行，并把证据边界写入报告。
+默认验证不得访问云资源或修改外部状态。四个入口分别覆盖仓库边界、前端、Python 和 Java 工程基线；它们通过不代表真实云产品、模型或第一阶段验收门禁已经关闭。需要真实 Provider、Elasticsearch 或 OpenSearch 的 PoC 必须使用独立配置显式执行，并把证据边界写入报告。
 
 文档所有权与目录边界以 [`docs/README.md`](docs/README.md) 为准；实现细节不得反向覆盖 `docs/tech-plan.md`、ADR 或技术选型状态。

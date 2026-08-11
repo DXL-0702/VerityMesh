@@ -145,7 +145,7 @@ flowchart TB
 | 层次 | 组件与技术 | 主要职责 |
 | --- | --- | --- |
 | 前端体验层 | `portal-web`、`assistant-ui`；Vue 3 + TypeScript + Vite | 企业门户、项目页、治理界面、统一聊天 UI、Vue Web Component 和 TypeScript Client |
-| Java 平台层 | `platform-api`；Java + Spring Boot 模块化单体 | Project、Identity、Grant、Session、Thread、Release、任务状态、审计、Transactional Outbox 和公开 API |
+| Java 平台层 | `platform-api`；Java 21 + Spring Boot 4.1 + Spring MVC/Tomcat + WebClient + JPA/Flyway | Project、Identity、Grant、Session、Thread、Release、任务状态、审计、Transactional Outbox 和公开 API |
 | 在线 AI 层 | `assistant-runtime`；Python + FastAPI + `uv` | Execution Context Guard、Project/Global 查询计划、混合检索、RAG Kernel、模型访问、Grounding、Citation 和已验证事件 |
 | 知识批处理层 | `batch-worker`；Python + Celery + `uv` | Kafka 事件分发、扫描、解析/OCR、去重、Chunk、Embedding、批量投影、评测、激活准备和删除传播 |
 | 部署与弹性 | 阿里云 ACK + KEDA | 部署四个独立工作负载；按在线并发、Kafka Lag 和 Celery Queue 等待时间分别扩缩容 |
@@ -232,7 +232,7 @@ VerityMesh/
 `-- tools/                       # 仓库验证、代码生成与可重复 PoC 工具
 ```
 
-非 Java 工作区已经完成可构建基线初始化，版本与保留边界见 [`非 Java 工作区工具链基线`](docs/implementation-designs/0003-non-java-workspace-toolchain-baseline.md)。Java 构建工具、JDK、Spring Boot/Flyway 具体版本和 Java Schema 生成方式继续待定，`platform-api` 尚未创建工程清单；这次初始化不表示 Day 1 已开始。目录边界说明见 [`docs/README.md`](docs/README.md)。
+前端、Python 与 Java 工作区都已完成可构建工程基线初始化。完整版本与边界见 [`技术栈与外部选型总览`](docs/technology-selection/technology-selection.md)，精确可执行版本由各工作区 Manifest、锁文件和 Wrapper 固定；正式跨语言 Schema 与代码生成方式仍由 `P1-00` 验证。这次初始化不表示 Day 1 已开始。目录边界说明见 [`docs/README.md`](docs/README.md)。
 
 ## 文档导航
 
@@ -255,8 +255,9 @@ VerityMesh/
 ./tools/verify-repository.sh
 ./tools/verify-frontend.sh
 ./tools/verify-python.sh
+./tools/verify-java.sh
 ```
 
-仓库验证检查 Monorepo 目录边界、Markdown 本地链接、`docs/architecture.md` 的有向连通性，并运行文本检索 PoC 的单元测试和本地合同验证；另外两个入口分别完成前端和 Python 的锁定安装、格式、静态检查、测试与构建验证。Java 工具链尚未建立，因此当前没有伪装成全仓已验证的 `verify-all.sh`。云端 PoC 需要显式配置和批准，不属于默认仓库验证。
+四个入口分别验证仓库边界与文档链接、前端工作区、Python 工作区和 Java `platform-api`。Java 验证要求 Java 21，并通过 Maven Wrapper 执行完整 `clean verify`；这些本地检查不关闭真实云产品、模型或第一阶段验收门禁。云端 PoC 需要显式配置和批准，不属于默认仓库验证。
 
 协作与提交规则见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。

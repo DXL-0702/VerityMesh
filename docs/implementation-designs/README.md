@@ -16,4 +16,3 @@
 | --- | --- | --- |
 | `ACCEPTED` | [`0001-phase-1-execution-plan.md`](0001-phase-1-execution-plan.md) | 第一阶段分层职责、交付批次和验收门禁基线 |
 | `ACCEPTED` | [`0002-phase-1-seven-day-execution-route.md`](0002-phase-1-seven-day-execution-route.md) | 第一阶段七天并行执行路线、每日产物和完成条件；开工前检查尚未核验 |
-| `ACCEPTED` | [`0003-non-java-workspace-toolchain-baseline.md`](0003-non-java-workspace-toolchain-baseline.md) | Node/pnpm 与 Python/uv 工作区基线；Java 工具链继续待定，不启动七天倒计时 |
