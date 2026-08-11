@@ -15,10 +15,10 @@ from .execution_context import (
     AccessContextHash,
     AccessSegment,
     FrozenStrictModel,
-    GuardedExecutionContext,
     Identifier,
     LocaleTag,
 )
+from .revocation import RevocationClearedExecutionContext
 
 MAX_QUERY_CHARACTERS = 8192
 
@@ -46,6 +46,8 @@ class ProjectRetrievalFilter(FrozenStrictModel):
     access_segment: AccessSegment
     access_context_hash: AccessContextHash
     knowledge_release_id: Identifier
+    revocation_snapshot_version: Identifier
+    revocation_valid_until: datetime
     effective_at: datetime
 
 
@@ -96,7 +98,7 @@ class ProjectQueryPlan(FrozenStrictModel):
 
 @dataclass(frozen=True, slots=True)
 class QueryPlanningRequest:
-    context: GuardedExecutionContext
+    context: RevocationClearedExecutionContext
     original_query: str
 
 
@@ -169,6 +171,8 @@ class DeterministicProjectQueryPlanner:
                 access_segment=context.access_segment,
                 access_context_hash=context.access_context_hash,
                 knowledge_release_id=context.knowledge_release_id,
+                revocation_snapshot_version=guarded.revocation_snapshot_version,
+                revocation_valid_until=guarded.revocation_valid_until,
                 effective_at=guarded.checked_at,
             ),
             clarification_needed=False,

@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Callable
+from datetime import timedelta
 from typing import cast
 
 import pytest
@@ -21,6 +22,10 @@ from veritymesh_assistant_runtime.query_planning import (
     QueryPlanningRequest,
     normalize_query,
 )
+from veritymesh_assistant_runtime.revocation import (
+    RevocationClearedExecutionContext,
+    RevocationScope,
+)
 
 RAW_QUERY = "  \uff21\uff30\uff29\t错误\n怎么处理\uff1f  "
 
@@ -29,7 +34,14 @@ def planning_request(
     context_factory: Callable[..., ProjectExecutionContext],
     original_query: str = RAW_QUERY,
 ) -> QueryPlanningRequest:
-    context = ExecutionContextGuard(lambda: NOW).validate(context_factory())
+    guarded = ExecutionContextGuard(lambda: NOW).validate(context_factory())
+    context = RevocationClearedExecutionContext(
+        guarded_context=guarded,
+        revocation_scope=RevocationScope.from_context(guarded.context),
+        revocation_snapshot_version="revocation-snapshot-7",
+        revocation_checked_at=NOW,
+        revocation_valid_until=NOW + timedelta(seconds=10),
+    )
     return QueryPlanningRequest(context=context, original_query=original_query)
 
 
@@ -58,6 +70,8 @@ def test_deterministic_plan_derives_all_scope_from_the_guarded_context(
     assert plan.filters.access_segment == "PROJECT_AUTHORIZED"
     assert plan.filters.access_context_hash == "a" * 64
     assert plan.filters.knowledge_release_id == "release-1"
+    assert plan.filters.revocation_snapshot_version == "revocation-snapshot-7"
+    assert plan.filters.revocation_valid_until == NOW + timedelta(seconds=10)
     assert plan.filters.effective_at == NOW
     assert plan.limits.model_dump() == {
         "bm25_top_k": 50,
