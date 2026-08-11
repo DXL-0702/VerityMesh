@@ -4,7 +4,7 @@
 | --- | --- |
 | 类型 | Python/FastAPI 在线 AI Deployment |
 | 包管理 | `uv` |
-| 当前状态 | 在线入口、Execution Context、Revocation Guard 与确定性 Project Query Plan 基线已建立；业务 RAG 尚未实现 |
+| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回领域合同与 Domain RRF 基线已建立；回答链路尚未实现 |
 
 本目录负责不可变 Execution Context Guard、Project/Global Query Plan、Elasticsearch BM25 与 pgvector Vector Recall、RRF、Reranker、Evidence、Prompt、Model Access、Grounding、Citation 和已验证事件。
 
@@ -14,7 +14,9 @@
 
 Project Execution Context 的正式跨语言 Schema 位于 [`contracts/internal/v1/`](../../contracts/internal/v1/)，Python 消费模型通过漂移测试与其保持一致。`RevocationGuard` 要求 `RevocationCheckerPort` 返回完整 Scope、三态结果、快照版本和受限有效窗口；已撤回、状态未知、调用失败、Scope 错配、未来或陈旧结果均 fail closed，统一 Deadline 在调用前后重新校验。只有 `RevocationClearedExecutionContext` 可以进入确定性 `ProjectQueryPlan`，Plan 会继续携带撤回快照版本和有效期，并固定简单问题的查询归一化、可信过滤范围、混合检索参数与强制证据门禁，不调用模型。
 
-当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、检索与 Evidence 二次撤回复核、检索 Adapter、模型 Provider Adapter、完整 RAG Kernel、Grounding 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
+`HybridRetrievalKernel` 只接受已清场 Context、已验证 Plan 和服务端解析的联合 Projection 元数据。BM25 与 Query Embedding/Vector Recall 并发启动，Vector 分支内部按 Embedding 后 Recall 的顺序执行；三类任务端口只暴露平台 DTO、统一 Deadline、审计上下文、过滤条件、Manifest、Watermark、配置指纹和 Embedding Space，不暴露 Elasticsearch DSL、SQL、索引名或 Provider SDK 类型。两路结果在 RRF 前重新校验 Scope、Release、Access Segment、有效期、撤回快照、Projection 和 Embedding Space，按稳定 `chunk_id` 去重并保留原始 Rank/Score；同一 Chunk 的内容或 Citation 投影不一致时 fail closed。Vector 失败可带稳定原因降级为 BM25-only，BM25 失败不启用未冻结的 Vector-only 行为。
+
+当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Evidence 二次在线撤回复核、Reranker、Evidence Hub、模型 Provider Adapter、Prompt/Generator、Grounding 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
 
 应用入口为 `veritymesh_assistant_runtime.app:app`。在仓库根目录使用现有锁文件离线验证：
 
