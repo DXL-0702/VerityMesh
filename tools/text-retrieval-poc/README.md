@@ -1,5 +1,7 @@
 # VerityMesh 文本检索栈 PoC
 
+> 架构状态：本 Harness 在 2026-08-10 按 Elasticsearch/OpenSearch 单引擎文本+向量候选构建。2026-08-11 的 [`ADR-003`](../../docs/adr/0003-mysql-authority-and-pgvector-retrieval-projection.md) 已将目标链路冻结为 Elasticsearch BM25 + PostgreSQL/pgvector Vector。`local-validate` 的 RRF、Citation、过滤和降级合同仍有效；现有 `cloud-matrix` 与 Vector Adapter 只用于复现历史证据，在加入 pgvector Adapter、拆分 BM25/Vector Engine 和 Joint Projection Gate 前，不得关闭当前生产选型门禁。
+
 这是 `RET-001`、`RET-002`、`RET-003`、`MODEL-014`、`MODEL-015` 与 `GOV-007` 的可重复评测 harness。它验证首期链路：
 
 ```text
@@ -12,13 +14,13 @@
   -> Citation、指标、硬门禁报告
 ```
 
-这不是产品运行时，也不是 `tech-plan.md` 的替代事实源。PoC 数据与结论写入 `poc-reports/`；技术选型状态仍只由 `technology-selection/` 维护。
+这不是产品运行时，也不是 `docs/tech-plan.md` 的替代事实源。PoC 数据与结论写入 `docs/poc-reports/`；技术选型状态仍只由 `docs/technology-selection/` 维护。
 
 ## 已编码边界
 
 | 项目 | 当前 PoC 约束 |
 | --- | --- |
-| 引擎 | 阿里云 Elasticsearch 向量增强版 8.17 与阿里云 OpenSearch 向量检索版并列评测 |
+| 引擎 | 当前实现保留阿里云 Elasticsearch 向量增强版 8.17 与阿里云 OpenSearch 向量检索版的历史矩阵；目标架构所需 Elasticsearch BM25 + PostgreSQL/pgvector 联合矩阵尚待实现 |
 | BM25 | Elasticsearch IK Analysis 主候选；`ik_max_word` 索引、`ik_smart` 查询，并保留 `standard` 与 identifier 多字段 |
 | Embedding | `qwen3.7-text-embedding` 主候选、`text-embedding-v4` 挑战者；统一 1024 维、Dense、Cosine、平台 L2 v1、float32、原生 Query/Document 角色和空自定义指令 |
 | Reranker | `qwen3-rerank` 主候选、`gte-rerank-v2` 同云挑战者；故障路径为 RRF-only |
@@ -84,7 +86,7 @@ relevant_documents
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 tools/text-retrieval-poc/run_poc.py local-validate \
-  --output poc-reports/text-retrieval-poc-local-contract-2026-08-10
+  --output docs/poc-reports/text-retrieval-poc-local-contract-2026-08-10
 
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```

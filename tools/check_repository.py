@@ -10,7 +10,39 @@ from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHITECTURE = ROOT / "architecture.md"
+ARCHITECTURE_RELATIVE = Path("docs/architecture.md")
+ARCHITECTURE = ROOT / ARCHITECTURE_RELATIVE
+REQUIRED_PATHS = (
+    Path("README.md"),
+    Path("CONTRIBUTING.md"),
+    Path("apps/portal-web/README.md"),
+    Path("services/platform-api/README.md"),
+    Path("services/assistant-runtime/README.md"),
+    Path("services/batch-worker/README.md"),
+    Path("packages/assistant-ui/README.md"),
+    Path("packages/typescript-client/README.md"),
+    Path("contracts/README.md"),
+    Path("infra/README.md"),
+    Path("tests/README.md"),
+    Path("docs/README.md"),
+    Path("docs/tech-plan.md"),
+    ARCHITECTURE_RELATIVE,
+    Path("docs/adr/README.md"),
+    Path("docs/implementation-designs/README.md"),
+    Path("docs/technology-selection/technology-selection.md"),
+    Path("docs/poc-reports/README.md"),
+    Path("docs/runbooks/README.md"),
+    Path("tools/verify-repository.sh"),
+)
+LEGACY_DOCUMENT_PATHS = (
+    Path("architecture.md"),
+    Path("tech-plan.md"),
+    Path("adr"),
+    Path("implementation-designs"),
+    Path("technology-selection"),
+    Path("poc-reports"),
+    Path("runbooks"),
+)
 MARKDOWN_LINK = re.compile(
     r"!?\[[^\]]*\]\((?P<target><[^>]+>|[^)\s]+)(?:\s+['\"][^)]*['\"])?\)"
 )
@@ -38,7 +70,22 @@ def repository_markdown_files() -> list[Path]:
         capture_output=True,
         text=True,
     )
-    return [ROOT / line for line in result.stdout.splitlines() if line]
+    paths = {ROOT / line for line in result.stdout.splitlines() if line}
+    return sorted(path for path in paths if path.is_file())
+
+
+def check_repository_layout() -> list[str]:
+    failures = [
+        f"missing required repository path: {path.as_posix()}"
+        for path in REQUIRED_PATHS
+        if not (ROOT / path).exists()
+    ]
+    failures.extend(
+        f"legacy documentation path must move under docs/: {path.as_posix()}"
+        for path in LEGACY_DOCUMENT_PATHS
+        if (ROOT / path).exists()
+    )
+    return failures
 
 
 def local_link_target(raw_target: str) -> str | None:
@@ -88,14 +135,20 @@ def walk(start: str, adjacency: dict[str, set[str]]) -> set[str]:
 
 def check_architecture() -> tuple[list[str], int, int]:
     failures: list[str] = []
+    architecture_label = ARCHITECTURE_RELATIVE.as_posix()
+    if not ARCHITECTURE.is_file():
+        return [f"{architecture_label}: file does not exist"], 0, 0
+
     content = ARCHITECTURE.read_text(encoding="utf-8")
     blocks = list(MERMAID_BLOCK.finditer(content))
     if len(blocks) != 1:
-        return [f"architecture.md: expected one Mermaid block, found {len(blocks)}"], 0, 0
+        return [f"{architecture_label}: expected one Mermaid block, found {len(blocks)}"], 0, 0
 
     body = blocks[0].group("body")
     if "React" in body:
-        failures.append("architecture.md: React is outside the frozen first-stage boundary")
+        failures.append(
+            f"{architecture_label}: React is outside the frozen first-stage boundary"
+        )
 
     declarations: dict[str, int] = defaultdict(int)
     outgoing: dict[str, set[str]] = defaultdict(set)
@@ -108,13 +161,17 @@ def check_architecture() -> tuple[list[str], int, int]:
             declarations[declaration.group(1)] += 1
 
         if "---" in line and "-->" not in line:
-            failures.append(f"architecture.md Mermaid line {line_number}: undirected edge is forbidden")
+            failures.append(
+                f"{architecture_label} Mermaid line {line_number}: undirected edge is forbidden"
+            )
 
         if "-->" not in line and "-.->" not in line:
             continue
         edge = DIRECTED_EDGE.match(line)
         if edge is None:
-            failures.append(f"architecture.md Mermaid line {line_number}: unsupported edge syntax")
+            failures.append(
+                f"{architecture_label} Mermaid line {line_number}: unsupported edge syntax"
+            )
             continue
         source, target = edge.groups()
         outgoing[source].add(target)
@@ -123,27 +180,33 @@ def check_architecture() -> tuple[list[str], int, int]:
 
     duplicates = sorted(node for node, count in declarations.items() if count > 1)
     if duplicates:
-        failures.append(f"architecture.md: duplicate node declarations: {', '.join(duplicates)}")
+        failures.append(
+            f"{architecture_label}: duplicate node declarations: {', '.join(duplicates)}"
+        )
 
     referenced = set(outgoing) | set(incoming)
     missing = sorted(referenced - set(declarations))
     if missing:
-        failures.append(f"architecture.md: undeclared edge endpoints: {', '.join(missing)}")
+        failures.append(
+            f"{architecture_label}: undeclared edge endpoints: {', '.join(missing)}"
+        )
 
     for required in ("user", "userResult"):
         if required not in declarations:
-            failures.append(f"architecture.md: missing required flow endpoint {required}")
+            failures.append(f"{architecture_label}: missing required flow endpoint {required}")
 
     if "user" in declarations:
         unreachable = sorted(set(declarations) - walk("user", outgoing))
         if unreachable:
-            failures.append(f"architecture.md: unreachable from user: {', '.join(unreachable)}")
+            failures.append(
+                f"{architecture_label}: unreachable from user: {', '.join(unreachable)}"
+            )
 
     if "userResult" in declarations:
         cannot_finish = sorted(set(declarations) - walk("userResult", incoming))
         if cannot_finish:
             failures.append(
-                f"architecture.md: cannot reach userResult: {', '.join(cannot_finish)}"
+                f"{architecture_label}: cannot reach userResult: {', '.join(cannot_finish)}"
             )
 
     return failures, len(declarations), edge_count
@@ -155,7 +218,8 @@ def main() -> int:
         return 1
 
     markdown_files = repository_markdown_files()
-    failures = check_markdown_links(markdown_files)
+    failures = check_repository_layout()
+    failures.extend(check_markdown_links(markdown_files))
     architecture_failures, node_count, edge_count = check_architecture()
     failures.extend(architecture_failures)
 

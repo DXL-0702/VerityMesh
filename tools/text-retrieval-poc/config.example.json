@@ -1,7 +1,7 @@
 {
   "corpus": "/absolute/path/to/approved-corpus.jsonl",
   "queries": "/absolute/path/to/judged-queries.jsonl",
-  "output": "/absolute/path/to/poc-reports/text-retrieval-cloud-poc",
+  "output": "/absolute/path/to/docs/poc-reports/text-retrieval-cloud-poc",
   "cloud_gate_repetitions": 20,
   "tokenizer": {
     "type": "huggingface",
