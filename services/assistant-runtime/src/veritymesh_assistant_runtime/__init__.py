@@ -1,5 +1,7 @@
 """VerityMesh constrained online AI runtime package."""
 
+from .app import create_app
+
 __version__ = "0.0.0"
 
-__all__ = ("__version__",)
+__all__ = ("__version__", "create_app")
