@@ -322,10 +322,12 @@ class ClaimBuffer:
         if len(self._pending) + len(chunk.text) > MAX_CLAIM_BUFFER_CHARACTERS:
             raise ClaimBufferRejected("claim buffer exceeds the maximum text size")
         self._next_chunk_sequence += 1
+        scan_from = len(self._pending)
         self._pending += chunk.text
         claims: list[CandidateClaim] = []
         start = 0
-        for index, character in enumerate(self._pending):
+        for index in range(scan_from, len(self._pending)):
+            character = self._pending[index]
             if character in "\u3002\uff01\uff1f!?.\n":
                 candidate_text = self._pending[start : index + 1].strip()
                 if candidate_text:
@@ -380,13 +382,23 @@ class GenerationKernel:
                 reason=GenerationDegradationReason.NO_EVIDENCE,
             )
 
-        primary_request = self._provider_request(current, prompt, validated.binding)
         try:
-            raw_result = await self._port.generate(primary_request)
+            primary_request = self._provider_request(current, prompt, validated.binding)
+        except (AttributeError, TypeError, ValueError, ValidationError) as error:
+            raise GenerationScopeRejected from error
+        try:
+            async with asyncio.timeout(primary_request.deadline_remaining.total_seconds()):
+                raw_result = await self._port.generate(primary_request)
         except asyncio.CancelledError:
             raise
         except ExecutionDeadlineExceeded:
             raise
+        except TimeoutError:
+            self._validate_context(validated.context)
+            return await self._fallback_or_evidence_only(
+                validated,
+                primary_reason=GenerationDegradationReason.GENERATOR_UNAVAILABLE,
+            )
         except Exception:
             self._validate_context(validated.context)
             return await self._fallback_or_evidence_only(
@@ -440,13 +452,28 @@ class GenerationKernel:
                 reason=primary_reason,
             )
         current = self._validate_context(request.context)
-        fallback_request = self._provider_request(current, request.prompt, request.fallback_binding)
         try:
-            raw_result = await self._fallback_port.generate(fallback_request)
+            fallback_request = self._provider_request(
+                current,
+                request.prompt,
+                request.fallback_binding,
+            )
+        except (AttributeError, TypeError, ValueError, ValidationError) as error:
+            raise GenerationScopeRejected from error
+        try:
+            async with asyncio.timeout(fallback_request.deadline_remaining.total_seconds()):
+                raw_result = await self._fallback_port.generate(fallback_request)
         except asyncio.CancelledError:
             raise
         except ExecutionDeadlineExceeded:
             raise
+        except TimeoutError:
+            self._validate_context(request.context)
+            return _non_model_result(
+                request.prompt,
+                mode=GenerationMode.EVIDENCE_ONLY,
+                reason=GenerationDegradationReason.FALLBACK_UNAVAILABLE,
+            )
         except Exception:
             self._validate_context(request.context)
             return _non_model_result(

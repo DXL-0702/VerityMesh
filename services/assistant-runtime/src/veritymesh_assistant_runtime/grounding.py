@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -387,13 +388,23 @@ class GroundingKernel:
         if prompt.mode is PromptMode.REFUSAL or packet.status is EvidencePacketStatus.EMPTY:
             return _refusal_result(prompt, claim)
 
-        provider_request = self._provider_request(current, validated, validated.binding)
         try:
-            raw_result = await self._port.validate(provider_request)
+            provider_request = self._provider_request(current, validated, validated.binding)
+        except (AttributeError, TypeError, ValueError, ValidationError) as error:
+            raise GroundingScopeRejected from error
+        try:
+            async with asyncio.timeout(provider_request.deadline_remaining.total_seconds()):
+                raw_result = await self._port.validate(provider_request)
         except asyncio.CancelledError:
             raise
         except ExecutionDeadlineExceeded:
             raise
+        except TimeoutError:
+            self._validate_context(validated.context)
+            return await self._fallback_or_evidence_only(
+                validated,
+                primary_reason=GroundingDegradationReason.GROUNDING_UNAVAILABLE,
+            )
         except Exception:
             self._validate_context(validated.context)
             return await self._fallback_or_evidence_only(
@@ -454,13 +465,25 @@ class GroundingKernel:
                 reason=primary_reason,
             )
         current = self._validate_context(request.context)
-        fallback_request = self._provider_request(current, request, request.fallback_binding)
         try:
-            raw_result = await self._fallback_port.validate(fallback_request)
+            fallback_request = self._provider_request(current, request, request.fallback_binding)
+        except (AttributeError, TypeError, ValueError, ValidationError) as error:
+            raise GroundingScopeRejected from error
+        try:
+            async with asyncio.timeout(fallback_request.deadline_remaining.total_seconds()):
+                raw_result = await self._fallback_port.validate(fallback_request)
         except asyncio.CancelledError:
             raise
         except ExecutionDeadlineExceeded:
             raise
+        except TimeoutError:
+            self._validate_context(request.context)
+            return _evidence_only_result(
+                request.prompt,
+                request.claim,
+                request.evidence_packet,
+                reason=GroundingDegradationReason.FALLBACK_UNAVAILABLE,
+            )
         except Exception:
             self._validate_context(request.context)
             return _evidence_only_result(
@@ -751,7 +774,5 @@ def _hash_payload(value: object) -> str:
 
 def _validate_text_controls(value: str) -> None:
     for character in value:
-        if character.isprintable() or character in "\t\n\r":
-            continue
-        if ord(character) < 32 or ord(character) == 127:
+        if unicodedata.category(character) == "Cc" and character not in "\t\n\r":
             raise ValueError("grounding text contains a control character")

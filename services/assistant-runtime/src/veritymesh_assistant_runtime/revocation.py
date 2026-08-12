@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -15,6 +16,7 @@ from .execution_context import (
     AuditContext,
     Clock,
     ExecutionContextGuard,
+    ExecutionDeadlineExceeded,
     FrozenStrictModel,
     GuardedExecutionContext,
     Identifier,
@@ -193,7 +195,12 @@ class RevocationGuard:
         )
 
         try:
-            result = await self._checker.check(request)
+            async with asyncio.timeout(request.deadline_remaining.total_seconds()):
+                result = await self._checker.check(request)
+        except asyncio.CancelledError:
+            raise
+        except ExecutionDeadlineExceeded:
+            raise
         except Exception as error:
             self._context_guard.validate(current.context)
             raise RevocationStateUnavailable from error

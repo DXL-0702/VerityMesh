@@ -255,6 +255,115 @@ def test_provider_unavailability_degrades_to_evidence_only(
     assert len(fallback_port.requests) == (0 if fallback is None else 1)
 
 
+def test_primary_provider_timeout_uses_fallback(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = generation_request(context_factory, fallback_binding=binding("fallback"))
+
+    class TimeoutGenerator:
+        async def generate(self, _request: GeneratorRequest) -> GeneratorResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout generator unexpectedly returned")
+
+    fallback = ScriptedGenerator([])
+    fallback_binding = request.fallback_binding
+    assert fallback_binding is not None
+    fallback_request = GeneratorRequest(
+        prompt=request.prompt,
+        message_execution_id=request.prompt.message_execution_id,
+        prompt_fingerprint=request.prompt.prompt_fingerprint,
+        binding=fallback_binding,
+        deadline_at=request.context.context.deadline_at,
+        deadline_remaining=timedelta(seconds=2),
+        audit=request.context.context.audit,
+    )
+    fallback.outcomes.append(provider_result(fallback_request, "fallback"))
+
+    result = asyncio.run(
+        GenerationKernel(
+            TimeoutGenerator(),
+            fallback_port=fallback,
+            clock=lambda: NOW,
+        ).generate(request)
+    )
+
+    assert result.mode is GenerationMode.FALLBACK_GENERATED
+    assert result.degradation_reason is GenerationDegradationReason.GENERATOR_UNAVAILABLE
+
+
+def test_fallback_provider_timeout_degrades_to_evidence_only(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = generation_request(context_factory, fallback_binding=binding("fallback"))
+
+    class TimeoutFallback:
+        async def generate(self, _request: GeneratorRequest) -> GeneratorResult:
+            raise TimeoutError("fallback timeout")
+
+    result = asyncio.run(
+        GenerationKernel(
+            ScriptedGenerator([RuntimeError("primary unavailable")]),
+            fallback_port=TimeoutFallback(),
+            clock=lambda: NOW,
+        ).generate(request)
+    )
+
+    assert result.mode is GenerationMode.EVIDENCE_ONLY
+    assert result.degradation_reason is GenerationDegradationReason.FALLBACK_UNAVAILABLE
+
+
+def test_generator_request_construction_failure_is_scope_rejected(
+    context_factory: Callable[..., ProjectExecutionContext],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = generation_request(context_factory)
+
+    def reject(*_args: Any, **_kwargs: Any) -> GeneratorRequest:
+        raise ValueError("invalid provider request")
+
+    monkeypatch.setattr(GenerationKernel, "_provider_request", reject)
+
+    with pytest.raises(GenerationScopeRejected):
+        asyncio.run(GenerationKernel(ScriptedGenerator([]), clock=lambda: NOW).generate(request))
+
+
+def test_fallback_generator_request_construction_failure_is_scope_rejected(
+    context_factory: Callable[..., ProjectExecutionContext],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = generation_request(context_factory, fallback_binding=binding("fallback"))
+    calls = 0
+
+    def reject_after_primary(
+        *_args: Any,
+        **_kwargs: Any,
+    ) -> GeneratorRequest:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise ValueError("invalid fallback request")
+        return GeneratorRequest(
+            prompt=request.prompt,
+            message_execution_id=request.prompt.message_execution_id,
+            prompt_fingerprint=request.prompt.prompt_fingerprint,
+            binding=request.binding,
+            deadline_at=request.context.context.deadline_at,
+            deadline_remaining=timedelta(seconds=2),
+            audit=request.context.context.audit,
+        )
+
+    monkeypatch.setattr(GenerationKernel, "_provider_request", reject_after_primary)
+
+    with pytest.raises(GenerationScopeRejected):
+        asyncio.run(
+            GenerationKernel(
+                ScriptedGenerator([RuntimeError("primary unavailable")]),
+                fallback_port=ScriptedGenerator([]),
+                clock=lambda: NOW,
+            ).generate(request)
+        )
+
+
 @pytest.mark.parametrize("error", [asyncio.CancelledError(), ExecutionDeadlineExceeded()])
 def test_fallback_cancellation_and_deadline_are_not_converted(
     context_factory: Callable[..., ProjectExecutionContext],

@@ -285,6 +285,136 @@ def test_bm25_failure_aborts_retrieval_instead_of_using_vector_only(
     assert raised.value.__cause__ is failure
 
 
+def test_bm25_provider_timeout_aborts_retrieval(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = retrieval_request(context_factory)
+
+    class TimeoutBm25:
+        async def recall(self, _request: Bm25RecallRequest) -> RecallResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout BM25 provider unexpectedly returned")
+
+    with pytest.raises(Bm25RecallUnavailable):
+        asyncio.run(
+            kernel(
+                ScriptedQueryEmbedding([embedding_result()]),
+                TimeoutBm25(),
+                ScriptedVectorRecall([recall_result(request.plan, RecallBranch.VECTOR, ())]),
+            ).retrieve(request)
+        )
+
+
+def test_bm25_provider_deadline_error_propagates(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = retrieval_request(context_factory)
+
+    class DeadlineBm25:
+        async def recall(self, _request: Bm25RecallRequest) -> RecallResult:
+            raise ExecutionDeadlineExceeded
+
+    with pytest.raises(ExecutionDeadlineExceeded):
+        asyncio.run(
+            kernel(
+                ScriptedQueryEmbedding([embedding_result()]),
+                DeadlineBm25(),
+                ScriptedVectorRecall([]),
+            ).retrieve(request)
+        )
+
+
+def test_vector_provider_timeouts_degrade_vector_branch(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = retrieval_request(context_factory)
+
+    class TimeoutEmbedding:
+        async def embed_query(self, _request: QueryEmbeddingRequest) -> QueryEmbeddingResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout embedding provider unexpectedly returned")
+
+    class TimeoutVector:
+        async def recall(self, _request: VectorRecallRequest) -> RecallResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout vector provider unexpectedly returned")
+
+    bm25 = recall_result(request.plan, RecallBranch.BM25, ())
+    embedding_result_after_timeout = asyncio.run(
+        kernel(
+            TimeoutEmbedding(),
+            ScriptedBm25Recall([bm25]),
+            ScriptedVectorRecall([]),
+        ).retrieve(request)
+    )
+    assert (
+        embedding_result_after_timeout.vector_degradation_reason
+        is VectorDegradationReason.QUERY_EMBEDDING_UNAVAILABLE
+    )
+
+    vector_request = HybridRetrievalRequest(
+        context=request.context,
+        plan=request.plan,
+        projections=request.projections,
+    )
+    vector_result_after_timeout = asyncio.run(
+        kernel(
+            ScriptedQueryEmbedding([embedding_result()]),
+            ScriptedBm25Recall([bm25]),
+            TimeoutVector(),
+        ).retrieve(vector_request)
+    )
+    assert (
+        vector_result_after_timeout.vector_degradation_reason
+        is VectorDegradationReason.VECTOR_RECALL_UNAVAILABLE
+    )
+
+
+def test_vector_provider_deadline_errors_propagate(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = retrieval_request(context_factory)
+
+    class DeadlineEmbedding:
+        async def embed_query(self, _request: QueryEmbeddingRequest) -> QueryEmbeddingResult:
+            raise ExecutionDeadlineExceeded
+
+    with pytest.raises(ExecutionDeadlineExceeded):
+        asyncio.run(
+            kernel(
+                DeadlineEmbedding(),
+                ScriptedBm25Recall([recall_result(request.plan, RecallBranch.BM25, ())]),
+                ScriptedVectorRecall([]),
+            ).retrieve(request)
+        )
+
+    class DeadlineVector:
+        async def recall(self, _request: VectorRecallRequest) -> RecallResult:
+            raise ExecutionDeadlineExceeded
+
+    with pytest.raises(ExecutionDeadlineExceeded):
+        asyncio.run(
+            kernel(
+                ScriptedQueryEmbedding([embedding_result()]),
+                ScriptedBm25Recall([recall_result(request.plan, RecallBranch.BM25, ())]),
+                DeadlineVector(),
+            ).retrieve(request)
+        )
+
+    class CancelledVector:
+        async def recall(self, _request: VectorRecallRequest) -> RecallResult:
+            raise asyncio.CancelledError
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(
+            kernel(
+                ScriptedQueryEmbedding([embedding_result()]),
+                ScriptedBm25Recall([recall_result(request.plan, RecallBranch.BM25, ())]),
+                CancelledVector(),
+            ).retrieve(request)
+        )
+
+
 def test_invalid_bm25_result_fails_closed(
     context_factory: Callable[..., ProjectExecutionContext],
 ) -> None:

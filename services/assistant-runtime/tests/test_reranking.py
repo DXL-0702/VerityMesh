@@ -396,6 +396,35 @@ def test_cancellation_is_not_converted_into_an_rrf_fallback(
         asyncio.run(reranking_kernel(CancelledReranker()).rerank(request))
 
 
+def test_reranker_provider_timeout_uses_rrf_fallback(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = reranking_request(context_factory, candidate(1, "a"))
+
+    class TimeoutReranker:
+        async def rerank(self, _request: RerankerRequest) -> RerankerResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout reranker unexpectedly returned")
+
+    result = asyncio.run(reranking_kernel(TimeoutReranker()).rerank(request))
+
+    assert result.mode is RerankingMode.RRF_FALLBACK
+    assert result.degradation_reason is RerankerDegradationReason.RERANKER_UNAVAILABLE
+
+
+def test_reranker_provider_deadline_error_propagates(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = reranking_request(context_factory, candidate(1, "a"))
+
+    class DeadlineReranker:
+        async def rerank(self, _request: RerankerRequest) -> RerankerResult:
+            raise ExecutionDeadlineExceeded
+
+    with pytest.raises(ExecutionDeadlineExceeded):
+        asyncio.run(reranking_kernel(DeadlineReranker()).rerank(request))
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [

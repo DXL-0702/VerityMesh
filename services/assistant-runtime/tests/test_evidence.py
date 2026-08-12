@@ -378,6 +378,39 @@ def test_content_revocation_failure_and_cancellation_are_not_misclassified(
         asyncio.run(evidence_hub(CancelledChecker()).build(request))
 
 
+def test_content_revocation_provider_timeout_is_mapped_to_unavailable(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request, _ = reranking(context_factory, fused_candidate(1, "a"))
+
+    class TimeoutChecker:
+        async def check(
+            self,
+            _request: EvidenceRevocationCheckRequest,
+        ) -> EvidenceRevocationCheckResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout content checker unexpectedly returned")
+
+    with pytest.raises(EvidenceRevocationStateUnavailable):
+        asyncio.run(evidence_hub(TimeoutChecker()).build(request))
+
+
+def test_content_revocation_provider_deadline_error_propagates(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request, _ = reranking(context_factory, fused_candidate(1, "a"))
+
+    class DeadlineChecker:
+        async def check(
+            self,
+            _request: EvidenceRevocationCheckRequest,
+        ) -> EvidenceRevocationCheckResult:
+            raise ExecutionDeadlineExceeded
+
+    with pytest.raises(ExecutionDeadlineExceeded):
+        asyncio.run(evidence_hub(DeadlineChecker()).build(request))
+
+
 def test_deadline_prevents_or_takes_precedence_after_content_revocation(
     context_factory: Callable[..., ProjectExecutionContext],
 ) -> None:
@@ -537,7 +570,7 @@ def test_invalid_evidence_inputs_prevent_content_revocation_calls(
             plan=request.plan,
             reranking=request.reranking,
             citation_policy=request.citation_policy.model_copy(
-                update={"allowed_https_origins": ("https://Docs.Example.com",)}
+                update={"allowed_https_origins": ("https://docs.example.com/path",)}
             ),
         )
     checker = ScriptedEvidenceRevocationChecker([])
@@ -621,7 +654,9 @@ def test_unsafe_citation_urls_are_rejected_after_clear_revocation(
     ],
 )
 def test_citation_policy_accepts_canonical_https_origins(origin: str) -> None:
-    assert CitationPolicy(allowed_https_origins=(origin,)).allowed_https_origins == (origin,)
+    assert CitationPolicy(allowed_https_origins=(origin,)).allowed_https_origins == (
+        "https://docs.example.com",
+    )
 
 
 @pytest.mark.parametrize(
@@ -646,6 +681,33 @@ def test_citation_policy_rejects_duplicate_origins() -> None:
     with pytest.raises(ValidationError, match="cannot contain duplicates"):
         CitationPolicy(
             allowed_https_origins=("https://docs.example.com", "https://docs.example.com")
+        )
+
+
+def test_citation_policy_rejects_non_string_origins() -> None:
+    with pytest.raises(ValidationError):
+        CitationPolicy.model_validate({"allowed_https_origins": (123,)})
+
+
+def test_citation_policy_normalizes_default_https_port() -> None:
+    policy = CitationPolicy(allowed_https_origins=("https://docs.example.com:443",))
+    assert policy.allowed_https_origins == ("https://docs.example.com",)
+
+
+def test_citation_policy_normalizes_ipv6_origin() -> None:
+    policy = CitationPolicy(allowed_https_origins=("https://[2001:db8::1]:443",))
+    assert policy.allowed_https_origins == ("https://[2001:db8::1]",)
+
+
+def test_citation_policy_rejects_non_sequence_input() -> None:
+    with pytest.raises(ValidationError):
+        CitationPolicy.model_validate({"allowed_https_origins": "https://docs.example.com"})
+
+
+def test_citation_policy_rejects_duplicate_after_origin_normalization() -> None:
+    with pytest.raises(ValidationError, match="cannot contain duplicates"):
+        CitationPolicy(
+            allowed_https_origins=("https://docs.example.com", "https://docs.example.com:443")
         )
 
 

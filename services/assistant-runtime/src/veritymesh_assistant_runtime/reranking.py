@@ -15,6 +15,7 @@ from .execution_context import (
     AuditContext,
     Clock,
     ExecutionContextGuard,
+    ExecutionDeadlineExceeded,
     FrozenStrictModel,
     GuardedExecutionContext,
     Identifier,
@@ -285,8 +286,11 @@ class RerankingKernel:
             audit=context.audit,
         )
         try:
-            raw_result = await self._port.rerank(port_request)
+            async with asyncio.timeout(port_request.deadline_remaining.total_seconds()):
+                raw_result = await self._port.rerank(port_request)
         except asyncio.CancelledError:
+            raise
+        except ExecutionDeadlineExceeded:
             raise
         except Exception:
             self._validate_context(request.context)

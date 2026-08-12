@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from hashlib import sha256
 from typing import Annotated, Literal, Protocol, Self
-from urllib.parse import unquote, urlsplit
+from urllib.parse import SplitResult, unquote, urlsplit
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 
@@ -17,6 +17,7 @@ from .execution_context import (
     AuditContext,
     Clock,
     ExecutionContextGuard,
+    ExecutionDeadlineExceeded,
     FrozenStrictModel,
     GuardedExecutionContext,
     Identifier,
@@ -75,27 +76,17 @@ class CitationPolicy(FrozenStrictModel):
 
     allowed_https_origins: tuple[CitationOrigin, ...] = ()
 
+    @field_validator("allowed_https_origins", mode="before")
+    @classmethod
+    def normalize_allowed_origins(cls, value: object) -> object:
+        if not isinstance(value, (tuple, list)):
+            return value
+        return tuple(_canonical_https_origin(origin) for origin in value)
+
     @model_validator(mode="after")
     def validate_origins(self) -> Self:
         if len(set(self.allowed_https_origins)) != len(self.allowed_https_origins):
             raise ValueError("citation origin allowlist cannot contain duplicates")
-        for origin in self.allowed_https_origins:
-            try:
-                parsed = urlsplit(origin)
-                _ = parsed.port
-            except ValueError as error:
-                raise ValueError("citation origin must be a valid HTTPS origin") from error
-            if (
-                parsed.scheme != "https"
-                or not parsed.hostname
-                or parsed.username is not None
-                or parsed.password is not None
-                or parsed.path
-                or parsed.query
-                or parsed.fragment
-                or origin != f"https://{parsed.netloc.lower()}"
-            ):
-                raise ValueError("citation origin must be a canonical HTTPS origin")
         return self
 
 
@@ -471,8 +462,11 @@ class EvidenceHub:
             audit=context.audit,
         )
         try:
-            raw_result = await self._revocation_checker.check(check_request)
+            async with asyncio.timeout(check_request.deadline_remaining.total_seconds()):
+                raw_result = await self._revocation_checker.check(check_request)
         except asyncio.CancelledError:
+            raise
+        except ExecutionDeadlineExceeded:
             raise
         except Exception as error:
             self._validate_context(request.context)
@@ -701,7 +695,10 @@ def _validated_citation_kind(
         decoded_path = next_path
 
     if parsed.scheme == "https":
-        origin = f"https://{parsed.netloc.lower()}"
+        try:
+            origin = _canonical_https_origin_from_parts(parsed, require_empty_components=False)
+        except ValueError as error:
+            raise EvidenceCitationRejected from error
         if (
             not parsed.hostname
             or parsed.username is not None
@@ -718,6 +715,55 @@ def _validated_citation_kind(
     ):
         return CitationKind.CITATION_PROXY
     raise EvidenceCitationRejected
+
+
+def _canonical_https_origin(origin: object) -> str:
+    if not isinstance(origin, str):
+        raise ValueError("citation origin must be a valid HTTPS origin")
+    try:
+        parsed = urlsplit(origin)
+        canonical = _canonical_https_origin_from_parts(parsed)
+        host = parsed.hostname
+        assert host is not None
+        normalized_host = host.lower()
+        if ":" in normalized_host and not normalized_host.startswith("["):
+            normalized_host = f"[{normalized_host}]"
+        raw_authority = (
+            normalized_host if parsed.port is None else f"{normalized_host}:{parsed.port}"
+        )
+        if origin != f"https://{raw_authority}":
+            raise ValueError("citation origin must be a canonical HTTPS origin")
+        return canonical
+    except (TypeError, ValueError) as error:
+        raise ValueError("citation origin must be a valid HTTPS origin") from error
+
+
+def _canonical_https_origin_from_parts(
+    parsed: SplitResult,
+    *,
+    require_empty_components: bool = True,
+) -> str:
+    try:
+        scheme = parsed.scheme
+        hostname = parsed.hostname
+        username = parsed.username
+        password = parsed.password
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError("citation origin must be a valid HTTPS origin") from error
+    if (
+        scheme != "https"
+        or not hostname
+        or username is not None
+        or password is not None
+        or (require_empty_components and (parsed.path or parsed.query or parsed.fragment))
+    ):
+        raise ValueError("citation origin must be a canonical HTTPS origin")
+    host = hostname.lower()
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    authority = host if port in (None, 443) else f"{host}:{port}"
+    return f"https://{authority}"
 
 
 def _citation(chunk: RetrievalChunk, allowed_origins: tuple[str, ...]) -> Citation:

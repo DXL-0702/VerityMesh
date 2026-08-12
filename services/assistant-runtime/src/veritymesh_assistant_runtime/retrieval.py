@@ -16,6 +16,7 @@ from .execution_context import (
     AuditContext,
     Clock,
     ExecutionContextGuard,
+    ExecutionDeadlineExceeded,
     FrozenStrictModel,
     GuardedExecutionContext,
     Identifier,
@@ -606,7 +607,12 @@ class HybridRetrievalKernel:
             audit=context.audit,
         )
         try:
-            raw_result = await self._bm25_recall.recall(recall_request)
+            async with asyncio.timeout(recall_request.deadline_remaining.total_seconds()):
+                raw_result = await self._bm25_recall.recall(recall_request)
+        except asyncio.CancelledError:
+            raise
+        except ExecutionDeadlineExceeded:
+            raise
         except Exception as error:
             self._validate_clearance(request.context)
             raise Bm25RecallUnavailable from error
@@ -638,7 +644,12 @@ class HybridRetrievalKernel:
             audit=context.audit,
         )
         try:
-            raw_embedding = await self._query_embedding.embed_query(embedding_request)
+            async with asyncio.timeout(embedding_request.deadline_remaining.total_seconds()):
+                raw_embedding = await self._query_embedding.embed_query(embedding_request)
+        except asyncio.CancelledError:
+            raise
+        except ExecutionDeadlineExceeded:
+            raise
         except Exception:
             self._validate_clearance(request.context)
             return _VectorBranchResult(
@@ -672,7 +683,12 @@ class HybridRetrievalKernel:
             audit=context.audit,
         )
         try:
-            raw_result = await self._vector_recall.recall(vector_request)
+            async with asyncio.timeout(vector_request.deadline_remaining.total_seconds()):
+                raw_result = await self._vector_recall.recall(vector_request)
+        except asyncio.CancelledError:
+            raise
+        except ExecutionDeadlineExceeded:
+            raise
         except Exception:
             self._validate_clearance(request.context)
             return _VectorBranchResult(

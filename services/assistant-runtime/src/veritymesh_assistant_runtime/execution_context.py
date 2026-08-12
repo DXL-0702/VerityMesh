@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -99,7 +100,9 @@ class ProjectExecutionContext(FrozenStrictModel):
     @field_validator("issued_at", "expires_at", "deadline_at", mode="before")
     @classmethod
     def reject_non_rfc3339_timestamp(cls, value: object) -> object:
-        if not isinstance(value, (str, datetime)):
+        if isinstance(value, datetime):
+            return value
+        if not isinstance(value, str) or not _RFC3339_TIMESTAMP.fullmatch(value):
             raise ValueError("execution context timestamps must use RFC 3339 strings")
         return value
 
@@ -153,6 +156,10 @@ class GuardedExecutionContext:
 
 
 Clock = Callable[[], datetime]
+
+_RFC3339_TIMESTAMP = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 def utc_now() -> datetime:

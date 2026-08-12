@@ -205,6 +205,33 @@ def test_cancellation_is_not_converted_into_an_unknown_revocation_state(
         asyncio.run(revocation_guard(CancelledRevocationChecker()).validate(guarded))
 
 
+def test_revocation_provider_timeout_is_mapped_to_unavailable(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    guarded = guarded_context(context_factory)
+
+    class TimeoutChecker:
+        async def check(self, _request: RevocationCheckRequest) -> RevocationCheckResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout checker unexpectedly returned")
+
+    with pytest.raises(RevocationStateUnavailable):
+        asyncio.run(revocation_guard(TimeoutChecker()).validate(guarded))
+
+
+def test_revocation_provider_deadline_error_propagates(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    guarded = guarded_context(context_factory)
+
+    class DeadlineChecker:
+        async def check(self, _request: RevocationCheckRequest) -> RevocationCheckResult:
+            raise ExecutionDeadlineExceeded
+
+    with pytest.raises(ExecutionDeadlineExceeded):
+        asyncio.run(revocation_guard(DeadlineChecker()).validate(guarded))
+
+
 def test_revocation_result_requires_an_aware_ordered_time_window(
     context_factory: Callable[..., ProjectExecutionContext],
 ) -> None:

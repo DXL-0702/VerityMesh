@@ -88,6 +88,7 @@ def grounding_request(
     prompt_request = build_request(
         context_factory,
         empty=empty,
+        context=context,
         evidence_packet=packet,
     )
     prompt = PromptBuilder(clock=lambda: NOW).build(prompt_request)
@@ -300,6 +301,101 @@ def test_fallback_supported_claim_preserves_primary_failure(
     assert result.degradation_reason is GroundingDegradationReason.GROUNDING_UNAVAILABLE
     assert result.validated_claim is not None
     assert fallback.requests[0].binding == fallback_binding
+
+
+def test_grounding_provider_timeouts_degrade_safely(
+    context_factory: Callable[..., ProjectExecutionContext],
+) -> None:
+    request = grounding_request(context_factory, fallback_binding=binding("fallback"))
+
+    class TimeoutPrimary:
+        async def validate(self, _request: GroundingRequest) -> GroundingProviderResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout grounding provider unexpectedly returned")
+
+    class TimeoutFallback:
+        async def validate(self, _request: GroundingRequest) -> GroundingProviderResult:
+            await asyncio.sleep(10)
+            raise AssertionError("timeout fallback provider unexpectedly returned")
+
+    result = asyncio.run(
+        GroundingKernel(
+            TimeoutPrimary(),
+            fallback_port=TimeoutFallback(),
+            clock=lambda: NOW,
+        ).validate(request)
+    )
+
+    assert result.mode is GroundingMode.EVIDENCE_ONLY
+    assert result.degradation_reason is GroundingDegradationReason.FALLBACK_UNAVAILABLE
+
+
+def test_grounding_provider_request_construction_failure_is_scope_rejected(
+    context_factory: Callable[..., ProjectExecutionContext],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = grounding_request(context_factory)
+
+    def reject(*_args: Any, **_kwargs: Any) -> GroundingRequest:
+        raise ValueError("invalid provider request")
+
+    monkeypatch.setattr(GroundingKernel, "_provider_request", reject)
+
+    with pytest.raises(GroundingScopeRejected):
+        asyncio.run(GroundingKernel(ScriptedGrounding([]), clock=lambda: NOW).validate(request))
+
+
+def test_grounding_fallback_request_construction_failure_is_scope_rejected(
+    context_factory: Callable[..., ProjectExecutionContext],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = grounding_request(context_factory, fallback_binding=binding("fallback"))
+    calls = 0
+
+    def reject_after_primary(*_args: Any, **_kwargs: Any) -> GroundingRequest:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise ValueError("invalid fallback request")
+        return GroundingRequest(
+            schema_version="1.0",
+            message_execution_id=request.claim.message_execution_id,
+            prompt_fingerprint=request.prompt.prompt_fingerprint,
+            claim=request.claim,
+            claim_fingerprint=grounding_claim_fingerprint(request.claim),
+            evidence_set_fingerprint=grounding_evidence_set_fingerprint(request.evidence_packet),
+            evidence=tuple(
+                GroundingEvidence(
+                    evidence_id=item.evidence_id,
+                    rank=item.rank,
+                    project_id=item.citation.project_id,
+                    project_version=item.citation.project_version,
+                    knowledge_release_id=item.citation.knowledge_release_id,
+                    title=item.title,
+                    section=item.citation.section,
+                    text=item.chunk_text,
+                    citation_url=item.citation.citation_url,
+                    effective_from=item.citation.effective_from,
+                    effective_to=item.citation.effective_to,
+                )
+                for item in request.evidence_packet.evidence
+            ),
+            binding=request.binding,
+            deadline_at=request.context.context.deadline_at,
+            deadline_remaining=timedelta(seconds=2),
+            audit=request.context.context.audit,
+        )
+
+    monkeypatch.setattr(GroundingKernel, "_provider_request", reject_after_primary)
+
+    with pytest.raises(GroundingScopeRejected):
+        asyncio.run(
+            GroundingKernel(
+                ScriptedGrounding([RuntimeError("primary unavailable")]),
+                fallback_port=ScriptedGrounding([]),
+                clock=lambda: NOW,
+            ).validate(request)
+        )
 
 
 @pytest.mark.parametrize("error", [asyncio.CancelledError(), ExecutionDeadlineExceeded()])
