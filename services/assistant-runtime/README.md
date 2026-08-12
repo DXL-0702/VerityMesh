@@ -4,7 +4,7 @@
 | --- | --- |
 | 类型 | Python/FastAPI 在线 AI Deployment |
 | 包管理 | `uv` |
-| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回、Domain RRF、Reranker 与 Evidence Hub 领域基线已建立；生成与回答链路尚未实现 |
+| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回、Domain RRF、Reranker、Evidence Hub 与 Prompt Builder 领域基线已建立；Generator、Grounding、已验证 Claim Stream 与 SSE 尚未实现 |
 
 本目录负责不可变 Execution Context Guard、Project/Global Query Plan、Elasticsearch BM25 与 pgvector Vector Recall、RRF、Reranker、Evidence、Prompt、Model Access、Grounding、Citation 和已验证事件。
 
@@ -18,7 +18,9 @@ Project Execution Context 的正式跨语言 Schema 位于 [`contracts/internal/
 
 `RerankingKernel` 在任何正文出站前重新构造并复核检索结果，只向任务端口发送 Query 与最小候选正文；结果必须回显可信模型 Binding、Execution 和候选集指纹。Provider 不可用或响应无效时不在在线 Deadline 内重试，而是保留稳定降级原因并回退 RRF Top 10。`EvidenceHub` 再次复核执行 Scope，并通过独立任务端口批量检查候选内容撤回状态；已撤回候选被排除，未知、陈旧、错配或不完整结果整体 fail closed。输出 `EvidencePacket` 保留执行与内容撤回快照、完整检索/精排 Provenance、确定性 Evidence ID，以及只允许 Citation Proxy 或服务端白名单 HTTPS Origin 的公开 Citation，不包含内部 Source Locator。
 
-当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Reranker Provider Adapter、内容撤回状态 Adapter、其他模型 Provider Adapter、Prompt Builder、Generator、Grounding、已验证 Claim Stream 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
+`PromptBuilder` 只接收经过 Evidence Hub 校验的 `EvidencePacket`，在再次复核执行租约、Project/Version/Locale/Release/Access Segment 和 Memory 项目边界后，按固定的 `Policy -> Memory -> Evidence -> User Query` 顺序输出不可变 Provider-neutral Prompt DTO。Policy、Memory 和 Evidence 使用不同的领域类型与消息段；Memory 只用于连续性，不具备事实或 Citation 语义。Evidence 输出仅保留安全的项目、版本、Release、标题、章节、正文和 Citation 信息，不携带 Access Context Hash、内部 Source Locator、索引名或物理存储路径。Prompt Builder 不调用模型、不执行网络请求、不生成答案；字符/估算 Token 预算不足、Scope 不匹配、Packet 非法或 Evidence 缺失时 fail closed，不静默截断事实证据。空 Evidence 生成显式受限拒答 Prompt，并保留 Pipeline Provenance 与 Prompt Fingerprint。
+
+当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Reranker Provider Adapter、内容撤回状态 Adapter、其他模型 Provider Adapter、Generator、Grounding、已验证 Claim Stream 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
 
 应用入口为 `veritymesh_assistant_runtime.app:app`。在仓库根目录使用现有锁文件离线验证：
 
