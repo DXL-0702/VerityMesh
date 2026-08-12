@@ -4,9 +4,9 @@
 | --- | --- |
 | 类型 | Python/FastAPI 在线 AI Deployment |
 | 包管理 | `uv` |
-| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回、Domain RRF、Reranker、Evidence Hub 与 Prompt Builder 领域基线已建立；Generator、Grounding、已验证 Claim Stream 与 SSE 尚未实现 |
+| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回、Domain RRF、Reranker、Evidence Hub、Prompt Builder 与 Generator 领域基线已建立；Grounding、已验证 Claim Stream 与 SSE 尚未实现 |
 
-本目录负责不可变 Execution Context Guard、Project/Global Query Plan、Elasticsearch BM25 与 pgvector Vector Recall、RRF、Reranker、Evidence、Prompt、Model Access、Grounding、Citation 和已验证事件。
+本目录负责不可变 Execution Context Guard、Project/Global Query Plan、Elasticsearch BM25 与 pgvector Vector Recall、RRF、Reranker、Evidence、Prompt、Generator、Model Access、Grounding、Citation 和已验证事件。
 
 它不直接修改 MySQL 权威状态，不接受客户端自造 Scope，也不流出未验证模型 Token。受约束 RAG Domain Kernel 的详细边界见 [`ADR-001`](../../docs/adr/0001-constrained-rag-kernel-and-model-access.md)。
 
@@ -20,7 +20,9 @@ Project Execution Context 的正式跨语言 Schema 位于 [`contracts/internal/
 
 `PromptBuilder` 只接收经过 Evidence Hub 校验的 `EvidencePacket`，在再次复核执行租约、Project/Version/Locale/Release/Access Segment 和 Memory 项目边界后，按固定的 `Policy -> Memory -> Evidence -> User Query` 顺序输出不可变 Provider-neutral Prompt DTO。Policy、Memory 和 Evidence 使用不同的领域类型与消息段；Memory 只用于连续性，不具备事实或 Citation 语义。Evidence 输出仅保留安全的项目、版本、Release、标题、章节、正文和 Citation 信息，不携带 Access Context Hash、内部 Source Locator、索引名或物理存储路径。Prompt Builder 不调用模型、不执行网络请求、不生成答案；字符/估算 Token 预算不足、Scope 不匹配、Packet 非法或 Evidence 缺失时 fail closed，不静默截断事实证据。空 Evidence 生成显式受限拒答 Prompt，并保留 Pipeline Provenance 与 Prompt Fingerprint。
 
-当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Reranker Provider Adapter、内容撤回状态 Adapter、其他模型 Provider Adapter、Generator、Grounding、已验证 Claim Stream 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
+`GenerationKernel` 接收重新解析并校验过的 Prompt 和服务端可信 `GeneratorBinding`，通过 Provider-neutral `GeneratorPort` 发起最多一次主模型调用和一次备用模型调用。Provider 返回值必须回显 Execution、Prompt Fingerprint 和 Binding，并只能产生标记为 `UNVALIDATED` 的有序文本片段；主模型失败先按稳定原因切换备用模型，备用失败后输出显式 `EVIDENCE_ONLY`，无 Evidence 的 Prompt 直接输出 `REFUSAL`。取消和 Deadline 超时不会被伪装成普通降级。`ClaimBuffer` 只在完整句子或 Claim 边界生成 `CandidateClaim`，保留未闭合尾部，不建立 Evidence 支持关系，也不产生 `message_delta`；Grounding Validator 通过前不得向消费者流出模型文本。
+
+当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Reranker Provider Adapter、内容撤回状态 Adapter、真实 Generator Provider Adapter、Grounding、已验证 Claim Stream 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
 
 应用入口为 `veritymesh_assistant_runtime.app:app`。在仓库根目录使用现有锁文件离线验证：
 
