@@ -4,7 +4,7 @@
 | --- | --- |
 | 类型 | Python/FastAPI 在线 AI Deployment |
 | 包管理 | `uv` |
-| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回、Domain RRF、Reranker、Evidence Hub、Prompt Builder 与 Generator 领域基线已建立；Grounding、已验证 Claim Stream 与 SSE 尚未实现 |
+| 当前状态 | 在线入口、Execution Context、Revocation Guard、确定性 Project Query Plan、混合召回、Domain RRF、Reranker、Evidence Hub、Prompt Builder、Generator 与 Grounding 领域基线已建立；真实 Grounding Provider Adapter、已验证 Claim Stream 与 SSE 尚未实现 |
 
 本目录负责不可变 Execution Context Guard、Project/Global Query Plan、Elasticsearch BM25 与 pgvector Vector Recall、RRF、Reranker、Evidence、Prompt、Generator、Model Access、Grounding、Citation 和已验证事件。
 
@@ -22,7 +22,9 @@ Project Execution Context 的正式跨语言 Schema 位于 [`contracts/internal/
 
 `GenerationKernel` 接收重新解析并校验过的 Prompt 和服务端可信 `GeneratorBinding`，通过 Provider-neutral `GeneratorPort` 发起最多一次主模型调用和一次备用模型调用。Provider 返回值必须回显 Execution、Prompt Fingerprint 和 Binding，并只能产生标记为 `UNVALIDATED` 的有序文本片段；主模型失败先按稳定原因切换备用模型，备用失败后输出显式 `EVIDENCE_ONLY`，无 Evidence 的 Prompt 直接输出 `REFUSAL`。取消和 Deadline 超时不会被伪装成普通降级。`ClaimBuffer` 只在完整句子或 Claim 边界生成 `CandidateClaim`，保留未闭合尾部，不建立 Evidence 支持关系，也不产生 `message_delta`；Grounding Validator 通过前不得向消费者流出模型文本。
 
-当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Reranker Provider Adapter、内容撤回状态 Adapter、真实 Generator Provider Adapter、Grounding、已验证 Claim Stream 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
+`GroundingKernel` 只接收重新解析并校验过的 `CandidateClaim` 与 `EvidencePacket`，并在同一 Execution Scope、Knowledge Release、Access Segment、Revocation Snapshot 和有效期内重新构造 Provider 请求。Provider 只返回结构化的语义 Label、Confidence 与 Evidence ID；只有 `SUPPORTED`、达到策略置信度阈值且引用合法 Evidence 时才产生 `ValidatedClaim`。部分支持、矛盾、证据不足和低置信度结果均为 `REJECTED`，不携带原始 Claim 文本；Provider 不可用或合同非法时按主/备用失败原因降级为安全 Evidence-only，空 Evidence 直接拒答。当前内核不产生 `message_delta`，真实 Grounding Provider Adapter、已验证 Claim Stream 与 SSE 仍未接入。
+
+当前仍不包含 Public Query Schema、Redis Online Revocation Adapter、真实 Elasticsearch/pgvector Adapter、Reranker Provider Adapter、内容撤回状态 Adapter、真实 Generator Provider Adapter、真实 Grounding Provider Adapter、已验证 Claim Stream 或 SSE。版本总览见 [`技术栈与外部选型总览`](../../docs/technology-selection/technology-selection.md)，后续交付边界见 [`第一阶段执行方案`](../../docs/implementation-designs/0001-phase-1-execution-plan.md)。本地可执行版本以成员 `pyproject.toml` 和根 `uv.lock` 为准。
 
 应用入口为 `veritymesh_assistant_runtime.app:app`。在仓库根目录使用现有锁文件离线验证：
 
