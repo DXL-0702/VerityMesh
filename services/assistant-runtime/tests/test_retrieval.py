@@ -1,6 +1,5 @@
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import cast
 
@@ -8,38 +7,38 @@ import pytest
 from conftest import NOW
 from pydantic import ValidationError
 from support.retrieval import (
+    BM25_CONFIGURATION,
+    EMBEDDING_SPACE,
+    MANIFEST_HASH,
+    MutableClock,
     ScriptedBm25Recall,
     ScriptedQueryEmbedding,
     ScriptedVectorRecall,
+    chunk,
+    embedding_result,
+    kernel,
+    projection_set,
+    query_plan,
+    recall_result,
+    retrieval_request,
 )
 from veritymesh_assistant_runtime.execution_context import (
-    AccessSegment,
-    ExecutionContextGuard,
     ExecutionDeadlineExceeded,
     ProjectExecutionContext,
 )
-from veritymesh_assistant_runtime.query_planning import (
-    DeterministicProjectQueryPlanner,
-    ProjectQueryPlan,
-    QueryPlanningRequest,
-)
 from veritymesh_assistant_runtime.retrieval import (
     Bm25RecallContractRejected,
-    Bm25RecallPort,
     Bm25RecallRequest,
     Bm25RecallUnavailable,
     EmbeddingSpaceFingerprint,
     FusedRetrievalCandidate,
-    HybridRetrievalKernel,
     HybridRetrievalRequest,
     HybridRetrievalResult,
     InvalidFusionConfiguration,
-    QueryEmbeddingPort,
     QueryEmbeddingRequest,
     QueryEmbeddingResult,
     RecallBranch,
     RecallHit,
-    RecallProjectionExpectation,
     RecallProvenance,
     RecallResult,
     RetrievalChunk,
@@ -48,154 +47,13 @@ from veritymesh_assistant_runtime.retrieval import (
     RetrievalProjectionSet,
     RetrievalScopeRejected,
     VectorDegradationReason,
-    VectorRecallPort,
     VectorRecallRequest,
     reciprocal_rank_fusion,
 )
 from veritymesh_assistant_runtime.revocation import (
     RevocationClearedExecutionContext,
-    RevocationScope,
     RevocationStateUnavailable,
 )
-
-MANIFEST_HASH = "1" * 64
-BM25_CONFIGURATION = "2" * 64
-VECTOR_CONFIGURATION = "3" * 64
-EMBEDDING_FINGERPRINT = "4" * 64
-CONTENT_HASH = "5" * 64
-
-EMBEDDING_SPACE = EmbeddingSpaceFingerprint(
-    fingerprint=EMBEDDING_FINGERPRINT,
-    dimension=2,
-)
-
-
-@dataclass
-class MutableClock:
-    current: datetime
-
-    def __call__(self) -> datetime:
-        return self.current
-
-
-def cleared_context(
-    context_factory: Callable[..., ProjectExecutionContext],
-) -> RevocationClearedExecutionContext:
-    guarded = ExecutionContextGuard(lambda: NOW).validate(context_factory())
-    return RevocationClearedExecutionContext(
-        guarded_context=guarded,
-        revocation_scope=RevocationScope.from_context(guarded.context),
-        revocation_snapshot_version="revocation-snapshot-7",
-        revocation_checked_at=NOW,
-        revocation_valid_until=NOW + timedelta(seconds=10),
-    )
-
-
-def query_plan(context: RevocationClearedExecutionContext) -> ProjectQueryPlan:
-    return asyncio.run(
-        DeterministicProjectQueryPlanner().plan(
-            QueryPlanningRequest(context=context, original_query="API 错误怎么处理?")
-        )
-    )
-
-
-def projection_set() -> RetrievalProjectionSet:
-    return RetrievalProjectionSet(
-        knowledge_release_id="release-1",
-        bm25=RecallProjectionExpectation(
-            projection_watermark="bm25-watermark-1",
-            chunk_manifest_hash=MANIFEST_HASH,
-            projection_configuration_fingerprint=BM25_CONFIGURATION,
-        ),
-        vector=RecallProjectionExpectation(
-            projection_watermark="vector-watermark-1",
-            chunk_manifest_hash=MANIFEST_HASH,
-            projection_configuration_fingerprint=VECTOR_CONFIGURATION,
-        ),
-        embedding_space_fingerprint=EMBEDDING_SPACE,
-    )
-
-
-def retrieval_request(
-    context_factory: Callable[..., ProjectExecutionContext],
-) -> HybridRetrievalRequest:
-    context = cleared_context(context_factory)
-    return HybridRetrievalRequest(
-        context=context,
-        plan=query_plan(context),
-        projections=projection_set(),
-    )
-
-
-def chunk(
-    chunk_id: str,
-    *,
-    title: str | None = None,
-    effective_from: datetime | None = NOW - timedelta(days=1),
-    effective_to: datetime | None = NOW + timedelta(days=1),
-) -> RetrievalChunk:
-    return RetrievalChunk(
-        chunk_id=chunk_id,
-        document_id=f"document-{chunk_id}",
-        knowledge_revision_id=f"revision-{chunk_id}",
-        knowledge_space_id="space-1",
-        project_id="project-1",
-        project_version="1.0.0",
-        locale="zh-CN",
-        access_segment=AccessSegment.PROJECT_AUTHORIZED,
-        knowledge_release_id="release-1",
-        content_hash=CONTENT_HASH,
-        chunk_manifest_hash=MANIFEST_HASH,
-        title=title or f"Title {chunk_id}",
-        section="API",
-        chunk_text=f"Chunk text {chunk_id}",
-        citation_url=f"/citations/{chunk_id}",
-        start_char=0,
-        end_char=10,
-        effective_from=effective_from,
-        effective_to=effective_to,
-    )
-
-
-def recall_result(
-    plan: ProjectQueryPlan,
-    branch: RecallBranch,
-    hits: tuple[RecallHit, ...],
-) -> RecallResult:
-    projection = projection_set().bm25 if branch is RecallBranch.BM25 else projection_set().vector
-    return RecallResult(
-        schema_version="1.0",
-        branch=branch,
-        filters=plan.filters,
-        message_execution_id=plan.message_execution_id,
-        projection_watermark=projection.projection_watermark,
-        chunk_manifest_hash=projection.chunk_manifest_hash,
-        projection_configuration_fingerprint=(projection.projection_configuration_fingerprint),
-        embedding_space_fingerprint=(EMBEDDING_SPACE if branch is RecallBranch.VECTOR else None),
-        hits=hits,
-    )
-
-
-def embedding_result() -> QueryEmbeddingResult:
-    return QueryEmbeddingResult(
-        vector=(1.0, 0.0),
-        embedding_space_fingerprint=EMBEDDING_SPACE,
-    )
-
-
-def kernel(
-    embedding: QueryEmbeddingPort,
-    bm25: Bm25RecallPort,
-    vector: VectorRecallPort,
-    *,
-    clock: Callable[[], datetime] = lambda: NOW,
-) -> HybridRetrievalKernel:
-    return HybridRetrievalKernel(
-        query_embedding=embedding,
-        bm25_recall=bm25,
-        vector_recall=vector,
-        clock=clock,
-    )
 
 
 def test_hybrid_retrieval_runs_both_ports_and_preserves_fusion_evidence(
@@ -766,11 +624,21 @@ def test_fused_candidate_requires_consistent_branch_fields(
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [
+        ("bm25_space", "BM25 provenance cannot carry"),
         ("missing_vector", "requires vector provenance"),
         ("wrong_reason", "degradation reason disagree"),
         ("bm25_branch", "BM25 provenance"),
         ("vector_branch", "vector provenance"),
+        ("vector_space", "vector provenance requires"),
+        ("provenance_manifest", "one chunk manifest"),
+        ("overflow", "Top 50"),
         ("rank", "fused ranks"),
+        ("duplicate_chunk", "repeat a chunk"),
+        ("duplicate_bm25_rank", "repeat a BM25 rank"),
+        ("duplicate_vector_rank", "repeat a vector rank"),
+        ("bm25_only_vector", "BM25-only retrieval cannot"),
+        ("rrf_score", "score does not match"),
+        ("rrf_order", "deterministic RRF order"),
     ],
 )
 def test_hybrid_result_enforces_mode_and_provenance_consistency(
@@ -793,7 +661,11 @@ def test_hybrid_result_enforces_mode_and_provenance_consistency(
         ).retrieve(request)
     )
     values = valid.model_dump()
-    if mutation == "missing_vector":
+    if mutation == "bm25_space":
+        cast(dict[str, object], values["bm25_provenance"])["embedding_space_fingerprint"] = (
+            EMBEDDING_SPACE.model_dump()
+        )
+    elif mutation == "missing_vector":
         values["vector_provenance"] = None
     elif mutation == "wrong_reason":
         values["vector_degradation_reason"] = "VECTOR_RECALL_UNAVAILABLE"
@@ -801,8 +673,127 @@ def test_hybrid_result_enforces_mode_and_provenance_consistency(
         cast(dict[str, object], values["bm25_provenance"])["branch"] = "VECTOR"
     elif mutation == "vector_branch":
         cast(dict[str, object], values["vector_provenance"])["branch"] = "BM25"
-    else:
+    elif mutation == "vector_space":
+        cast(dict[str, object], values["vector_provenance"])["embedding_space_fingerprint"] = None
+    elif mutation == "provenance_manifest":
+        cast(dict[str, object], values["vector_provenance"])["chunk_manifest_hash"] = "9" * 64
+    elif mutation == "overflow":
+        values["candidates"] = [
+            FusedRetrievalCandidate(
+                rank=rank,
+                rrf_score=1 / (60 + rank),
+                chunk=chunk(f"overflow-{rank}"),
+                bm25_rank=rank,
+                bm25_score=float(52 - rank),
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump()
+            for rank in range(1, 52)
+        ]
+    elif mutation == "rank":
         cast(list[dict[str, object]], values["candidates"])[0]["rank"] = 2
+    elif mutation == "duplicate_chunk":
+        values["candidates"] = [
+            FusedRetrievalCandidate(
+                rank=1,
+                rrf_score=1 / 61,
+                chunk=chunk("a"),
+                bm25_rank=1,
+                bm25_score=1.0,
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump(),
+            FusedRetrievalCandidate(
+                rank=2,
+                rrf_score=1 / 62,
+                chunk=chunk("a"),
+                bm25_rank=2,
+                bm25_score=0.5,
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump(),
+        ]
+    elif mutation == "duplicate_bm25_rank":
+        values["candidates"] = [
+            FusedRetrievalCandidate(
+                rank=1,
+                rrf_score=1 / 61,
+                chunk=chunk("a"),
+                bm25_rank=1,
+                bm25_score=1.0,
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump(),
+            FusedRetrievalCandidate(
+                rank=2,
+                rrf_score=1 / 61,
+                chunk=chunk("b"),
+                bm25_rank=1,
+                bm25_score=0.5,
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump(),
+        ]
+    elif mutation == "duplicate_vector_rank":
+        values["candidates"] = [
+            FusedRetrievalCandidate(
+                rank=1,
+                rrf_score=1 / 61,
+                chunk=chunk("a"),
+                bm25_rank=None,
+                bm25_score=None,
+                bm25_highlight=None,
+                vector_rank=1,
+                vector_score=0.5,
+            ).model_dump(),
+            FusedRetrievalCandidate(
+                rank=2,
+                rrf_score=1 / 61,
+                chunk=chunk("b"),
+                bm25_rank=None,
+                bm25_score=None,
+                bm25_highlight=None,
+                vector_rank=1,
+                vector_score=0.4,
+            ).model_dump(),
+        ]
+    elif mutation == "bm25_only_vector":
+        values["execution_mode"] = "BM25_ONLY"
+        values["vector_degradation_reason"] = "VECTOR_RECALL_UNAVAILABLE"
+        values["vector_provenance"] = None
+        candidate_values = cast(list[dict[str, object]], values["candidates"])[0]
+        candidate_values["vector_rank"] = 1
+        candidate_values["vector_score"] = 0.5
+    elif mutation == "rrf_score":
+        cast(list[dict[str, object]], values["candidates"])[0]["rrf_score"] = 0.9
+    else:
+        values["candidates"] = [
+            FusedRetrievalCandidate(
+                rank=1,
+                rrf_score=1 / 62,
+                chunk=chunk("b"),
+                bm25_rank=2,
+                bm25_score=1.0,
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump(),
+            FusedRetrievalCandidate(
+                rank=2,
+                rrf_score=1 / 61,
+                chunk=chunk("a"),
+                bm25_rank=1,
+                bm25_score=0.5,
+                bm25_highlight=None,
+                vector_rank=None,
+                vector_score=None,
+            ).model_dump(),
+        ]
 
     with pytest.raises(ValidationError, match=message):
         HybridRetrievalResult.model_validate(values)

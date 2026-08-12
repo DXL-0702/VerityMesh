@@ -51,6 +51,26 @@ class ProjectRetrievalFilter(FrozenStrictModel):
     effective_at: datetime
 
 
+def project_retrieval_filter_from_context(
+    context: RevocationClearedExecutionContext,
+) -> ProjectRetrievalFilter:
+    """Derive the only retrieval filter accepted for a cleared execution."""
+
+    execution = context.context
+    return ProjectRetrievalFilter(
+        project_execution_binding_id=execution.project_execution_binding_id,
+        project_id=execution.project_id,
+        project_version=execution.project_version,
+        locale=execution.locale,
+        access_segment=execution.access_segment,
+        access_context_hash=execution.access_context_hash,
+        knowledge_release_id=execution.knowledge_release_id,
+        revocation_snapshot_version=context.revocation_snapshot_version,
+        revocation_valid_until=context.revocation_valid_until,
+        effective_at=context.checked_at,
+    )
+
+
 class RetrievalLimits(FrozenStrictModel):
     """Frozen first-stage retrieval and fusion limits."""
 
@@ -163,18 +183,7 @@ class DeterministicProjectQueryPlanner:
             normalized_query=normalized_query,
             locale=context.locale,
             retrieval_mode=RetrievalMode.HYBRID,
-            filters=ProjectRetrievalFilter(
-                project_execution_binding_id=context.project_execution_binding_id,
-                project_id=context.project_id,
-                project_version=context.project_version,
-                locale=context.locale,
-                access_segment=context.access_segment,
-                access_context_hash=context.access_context_hash,
-                knowledge_release_id=context.knowledge_release_id,
-                revocation_snapshot_version=guarded.revocation_snapshot_version,
-                revocation_valid_until=guarded.revocation_valid_until,
-                effective_at=guarded.checked_at,
-            ),
+            filters=project_retrieval_filter_from_context(guarded),
             clarification_needed=False,
             clarification_question=None,
         )

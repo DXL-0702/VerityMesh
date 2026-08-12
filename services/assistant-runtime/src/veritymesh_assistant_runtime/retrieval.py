@@ -22,11 +22,15 @@ from .execution_context import (
     LocaleTag,
     utc_now,
 )
-from .query_planning import ProjectQueryPlan, ProjectRetrievalFilter, QueryText
+from .query_planning import (
+    ProjectQueryPlan,
+    ProjectRetrievalFilter,
+    QueryText,
+    project_retrieval_filter_from_context,
+)
 from .revocation import (
     RevocationClearedExecutionContext,
-    RevocationScope,
-    RevocationStateUnavailable,
+    revalidate_cleared_execution_context,
 )
 
 Sha256Digest = Annotated[
@@ -170,33 +174,44 @@ class RecallResult(FrozenStrictModel):
             raise ValueError("recall results cannot repeat a chunk")
 
         for hit in self.hits:
-            chunk = hit.chunk
-            if chunk.chunk_manifest_hash != self.chunk_manifest_hash:
-                raise ValueError("recall chunk does not match the result manifest")
-            if (
-                chunk.project_id,
-                chunk.project_version,
-                chunk.locale,
-                chunk.knowledge_release_id,
-            ) != (
-                self.filters.project_id,
-                self.filters.project_version,
-                self.filters.locale,
-                self.filters.knowledge_release_id,
-            ):
-                raise ValueError("recall chunk does not match the project retrieval scope")
-            if chunk.access_segment is not self.filters.access_segment:
-                raise ValueError("recall chunk does not match the access segment")
-            if (
-                chunk.effective_from is not None
-                and self.filters.effective_at < chunk.effective_from
-            ):
-                raise ValueError("recall chunk is not effective yet")
-            if chunk.effective_to is not None and self.filters.effective_at >= chunk.effective_to:
-                raise ValueError("recall chunk is no longer effective")
+            validate_retrieval_chunk_scope(
+                hit.chunk,
+                self.filters,
+                expected_manifest_hash=self.chunk_manifest_hash,
+            )
             if self.branch is RecallBranch.VECTOR and hit.highlight is not None:
                 raise ValueError("vector recall cannot return a lexical highlight")
         return self
+
+
+def validate_retrieval_chunk_scope(
+    chunk: RetrievalChunk,
+    filters: ProjectRetrievalFilter,
+    *,
+    expected_manifest_hash: str,
+) -> None:
+    """Reapply immutable retrieval boundaries to one downstream chunk."""
+
+    if chunk.chunk_manifest_hash != expected_manifest_hash:
+        raise ValueError("retrieval chunk does not match the result manifest")
+    if (
+        chunk.project_id,
+        chunk.project_version,
+        chunk.locale,
+        chunk.knowledge_release_id,
+    ) != (
+        filters.project_id,
+        filters.project_version,
+        filters.locale,
+        filters.knowledge_release_id,
+    ):
+        raise ValueError("retrieval chunk does not match the project retrieval scope")
+    if chunk.access_segment is not filters.access_segment:
+        raise ValueError("retrieval chunk does not match the access segment")
+    if chunk.effective_from is not None and filters.effective_at < chunk.effective_from:
+        raise ValueError("retrieval chunk is not effective yet")
+    if chunk.effective_to is not None and filters.effective_at >= chunk.effective_to:
+        raise ValueError("retrieval chunk is no longer effective")
 
 
 class RecallProjectionExpectation(FrozenStrictModel):
@@ -351,6 +366,8 @@ class HybridRetrievalResult(FrozenStrictModel):
 
     @model_validator(mode="after")
     def validate_execution_mode(self) -> Self:
+        if len(self.candidates) > 50:
+            raise ValueError("fused retrieval output cannot exceed Top 50")
         hybrid = self.execution_mode is RetrievalExecutionMode.HYBRID
         if hybrid != (self.vector_provenance is not None):
             raise ValueError("hybrid retrieval requires vector provenance")
@@ -358,15 +375,72 @@ class HybridRetrievalResult(FrozenStrictModel):
             raise ValueError("retrieval mode and vector degradation reason disagree")
         if self.bm25_provenance.branch is not RecallBranch.BM25:
             raise ValueError("BM25 provenance must identify the BM25 branch")
+        if self.bm25_provenance.embedding_space_fingerprint is not None:
+            raise ValueError("BM25 provenance cannot carry an embedding space")
         if (
             self.vector_provenance is not None
             and self.vector_provenance.branch is not RecallBranch.VECTOR
         ):
             raise ValueError("vector provenance must identify the vector branch")
+        if (
+            self.vector_provenance is not None
+            and self.vector_provenance.embedding_space_fingerprint is None
+        ):
+            raise ValueError("vector provenance requires an embedding space")
+        if (
+            self.vector_provenance is not None
+            and self.vector_provenance.chunk_manifest_hash
+            != self.bm25_provenance.chunk_manifest_hash
+        ):
+            raise ValueError("retrieval provenance must use one chunk manifest")
         if tuple(candidate.rank for candidate in self.candidates) != tuple(
             range(1, len(self.candidates) + 1)
         ):
             raise ValueError("fused ranks must be contiguous and start at one")
+        if len({candidate.chunk.chunk_id for candidate in self.candidates}) != len(self.candidates):
+            raise ValueError("fused retrieval output cannot repeat a chunk")
+        bm25_ranks = tuple(
+            candidate.bm25_rank for candidate in self.candidates if candidate.bm25_rank is not None
+        )
+        vector_ranks = tuple(
+            candidate.vector_rank
+            for candidate in self.candidates
+            if candidate.vector_rank is not None
+        )
+        if len(set(bm25_ranks)) != len(bm25_ranks):
+            raise ValueError("fused retrieval output cannot repeat a BM25 rank")
+        if len(set(vector_ranks)) != len(vector_ranks):
+            raise ValueError("fused retrieval output cannot repeat a vector rank")
+
+        expected_order: list[tuple[float, str]] = []
+        for candidate in self.candidates:
+            validate_retrieval_chunk_scope(
+                candidate.chunk,
+                self.filters,
+                expected_manifest_hash=self.bm25_provenance.chunk_manifest_hash,
+            )
+            if not hybrid and candidate.vector_rank is not None:
+                raise ValueError("BM25-only retrieval cannot contain vector candidates")
+            expected_score = math.fsum(
+                contribution
+                for contribution in (
+                    1.0 / (60 + candidate.bm25_rank) if candidate.bm25_rank is not None else None,
+                    1.0 / (60 + candidate.vector_rank)
+                    if candidate.vector_rank is not None
+                    else None,
+                )
+                if contribution is not None
+            )
+            if not math.isclose(
+                candidate.rrf_score,
+                expected_score,
+                rel_tol=0.0,
+                abs_tol=1e-15,
+            ):
+                raise ValueError("fused retrieval score does not match its source ranks")
+            expected_order.append((expected_score, candidate.chunk.chunk_id))
+        if expected_order != sorted(expected_order, key=lambda item: (-item[0], item[1])):
+            raise ValueError("fused retrieval candidates are not in deterministic RRF order")
         return self
 
 
@@ -628,23 +702,10 @@ class HybridRetrievalKernel:
 
     def _validate_request(self, request: HybridRetrievalRequest) -> None:
         context = request.context.context
-        filters = request.plan.filters
-        expected_filter = ProjectRetrievalFilter(
-            project_execution_binding_id=context.project_execution_binding_id,
-            project_id=context.project_id,
-            project_version=context.project_version,
-            locale=context.locale,
-            access_segment=context.access_segment,
-            access_context_hash=context.access_context_hash,
-            knowledge_release_id=context.knowledge_release_id,
-            revocation_snapshot_version=request.context.revocation_snapshot_version,
-            revocation_valid_until=request.context.revocation_valid_until,
-            effective_at=request.context.checked_at,
-        )
         if (
             request.plan.message_execution_id != context.message_execution_id
             or request.plan.locale != context.locale
-            or filters != expected_filter
+            or request.plan.filters != project_retrieval_filter_from_context(request.context)
             or request.projections.knowledge_release_id != context.knowledge_release_id
         ):
             raise RetrievalScopeRejected
@@ -653,14 +714,7 @@ class HybridRetrievalKernel:
         self,
         context: RevocationClearedExecutionContext,
     ) -> GuardedExecutionContext:
-        current = self._context_guard.validate(context.context)
-        if (
-            context.revocation_scope != RevocationScope.from_context(context.context)
-            or context.revocation_checked_at > current.checked_at
-            or context.revocation_valid_until <= current.checked_at
-        ):
-            raise RevocationStateUnavailable
-        return current
+        return revalidate_cleared_execution_context(context, self._context_guard)
 
     @staticmethod
     def _validate_recall_result(

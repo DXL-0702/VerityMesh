@@ -146,6 +146,22 @@ class RevocationClearedExecutionContext:
         return self.guarded_context.deadline_remaining
 
 
+def revalidate_cleared_execution_context(
+    context: RevocationClearedExecutionContext,
+    guard: ExecutionContextGuard,
+) -> GuardedExecutionContext:
+    """Recheck a cleared context immediately before and after downstream work."""
+
+    current = guard.validate(context.context)
+    if (
+        context.revocation_scope != RevocationScope.from_context(context.context)
+        or context.revocation_checked_at > current.checked_at
+        or context.revocation_valid_until <= current.checked_at
+    ):
+        raise RevocationStateUnavailable
+    return current
+
+
 class RevocationGuard:
     """Requires a fresh, scope-matched CLEAR result before downstream execution."""
 
