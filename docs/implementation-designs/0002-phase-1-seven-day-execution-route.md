@@ -82,7 +82,7 @@
 
 通过规则只有一条：十项全部通过才开始计算七天。部分通过不等于已经开工。
 
-截至 2026-08-13，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化；`P1-00` 已交付最小 Public OpenAPI、SSE envelope、SourceRevision Kafka Event、Celery JSON Task、统一错误/幂等字段，以及 Flyway/Alembic 首个迁移基线。`P1-01` 已建立 Java SourceRevision/Task/Outbox 领域骨架和上传完成后的内容元数据校验，Python Dispatcher 已通过严格合同测试；`infra/local` 已建立覆盖 MySQL、PostgreSQL/pgvector、Kafka、双 Redis、Elasticsearch 和 OSS 兼容存储的 Compose 定义、独立 Migration Job 与验证脚本，但当前 Docker daemon 不可用，真实容器启动和迁移执行证据仍未形成。真实 OSS Adapter、MySQL 业务连接、Kafka Outbox Publisher、Celery Worker、PostgreSQL/pgvector 投影写入和跨语言代码生成方式仍未完成。因此十项开工条件尚未全部关闭，项目状态继续保持 `NOT_STARTED`，七天倒计时没有开始。
+截至 2026-08-14，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化；`P1-00` 已交付最小 Public OpenAPI、SSE envelope、SourceRevision Kafka Event、Celery JSON Task、统一错误/幂等字段，以及 Flyway/Alembic 首个迁移基线。`P1-01` 已建立 Java SourceRevision/Task/Outbox 领域骨架、上传完成后的内容元数据校验和基于 AWS SDK for Java v2 的 S3-compatible Source Storage Adapter；Python Dispatcher 已通过严格合同测试；`infra/local` 已建立覆盖 MySQL、PostgreSQL/pgvector、Kafka、双 Redis、Elasticsearch 和 OSS 兼容存储的 Compose 定义、独立对象存储初始化 Job、独立 Migration Job 与验证脚本，但当前 Docker daemon 不可用，真实容器启动、MinIO 上传和迁移执行证据仍未形成。MySQL 业务连接、Kafka Outbox Publisher、Celery Worker、PostgreSQL/pgvector 投影写入和跨语言代码生成方式仍未完成。因此十项开工条件尚未全部关闭，项目状态继续保持 `NOT_STARTED`，七天倒计时没有开始。
 
 当前已完成但不等于端到端完成的边界：
 
@@ -91,8 +91,9 @@
 已完成：Flyway MySQL V1 / Alembic pgvector V1 离线迁移基线与独立 Migration Job 入口
 已完成：本地 Compose 依赖、数据库身份边界、健康检查和重复迁移验证脚本
 已完成：Java 上传预约/完成校验/幂等与 Outbox 持久化骨架
+已完成：S3-compatible Source Storage Adapter、服务端 Source Zone key、MinIO bucket/最小对象身份初始化 Job
 已完成：Python SourceRevisionSubmitted -> Celery JSON Task 转换
-未完成：本地容器实际启动证据、OSS 实际上传、MySQL 业务连接、Kafka 发布、Celery Worker、Portal 页面和跨服务 E2E
+未完成：本地容器实际启动证据、MinIO 实际上传、MySQL 业务连接、Kafka 发布、Celery Worker、Portal 页面和跨服务 E2E
 ```
 
 ## 4. 七天总览

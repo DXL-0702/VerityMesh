@@ -47,6 +47,8 @@ for service in mysql postgres kafka redis-online redis-celery elasticsearch obje
     wait_for_health "$service"
 done
 
+compose run --rm object-storage-init
+
 compose run --rm platform-api-migration
 compose run --rm batch-worker-migration
 

@@ -71,7 +71,7 @@ public class SourceRevisionService {
         String sourceObjectId = "source-object-" + UUID.randomUUID();
         String sourceRevisionId = "source-revision-" + UUID.randomUUID();
         String taskId = "task-" + sourceRevisionId;
-        String sourceZoneKey = "source-zone/" + projectId + "/" + sourceRevisionId;
+        String sourceZoneKey = sourceStorage.sourceZoneKey(projectId, sourceObjectId, sourceRevisionId);
         SourceStorage.UploadReservation reservation = sourceStorage.reserveUpload(
                 sourceZoneKey, request.contentType(), request.contentLength());
 

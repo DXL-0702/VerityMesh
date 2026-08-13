@@ -31,7 +31,7 @@ TypeScript、Python 和 Java 必须消费同一版本化 Schema。当前 Python 
 
 ```text
 POST upload reservation
-  -> OSS Source Zone 写入（当前适配器仍待接入）
+  -> OSS-compatible Source Zone 写入（预签名 PUT；Source Storage Adapter 使用服务端生成的 key）
   -> POST source-revisions/{id}/complete
   -> 校验 SHA-256 / Content-Type / Content-Length
   -> MySQL SourceRevision + Task 转为 QUEUED

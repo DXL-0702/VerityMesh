@@ -19,6 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
+        <aws.sdk.version>2.31.78</aws.sdk.version>
         <springdoc.version>3.1.0</springdoc.version>
     </properties>
 
@@ -54,6 +55,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

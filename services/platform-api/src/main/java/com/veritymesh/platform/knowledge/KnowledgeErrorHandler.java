@@ -40,6 +40,18 @@ public class KnowledgeErrorHandler {
         return error(HttpStatus.UNPROCESSABLE_ENTITY, "uploaded_object_mismatch", error.getMessage(), false, request);
     }
 
+    @ExceptionHandler(SourceObjectNotFoundException.class)
+    ResponseEntity<Map<String, Object>> sourceObjectNotFound(
+            SourceObjectNotFoundException error, HttpServletRequest request) {
+        return error(HttpStatus.UNPROCESSABLE_ENTITY, "uploaded_object_missing", error.getMessage(), false, request);
+    }
+
+    @ExceptionHandler(SourceStorageAccessException.class)
+    ResponseEntity<Map<String, Object>> sourceStorageAccess(
+            SourceStorageAccessException error, HttpServletRequest request) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "source_storage_unavailable", error.getMessage(), true, request);
+    }
+
     @ExceptionHandler(SourceStorageNotConfigured.class)
     ResponseEntity<Map<String, Object>> sourceStorageUnavailable(
             SourceStorageNotConfigured error, HttpServletRequest request) {

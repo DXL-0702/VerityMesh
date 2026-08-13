@@ -157,6 +157,35 @@ services:
       timeout: 5s
       retries: 30
 
+  object-storage-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      object-storage:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: veritymesh-local
+      MINIO_ROOT_PASSWORD: veritymesh-local-secret
+      MINIO_SOURCE_ACCESS_KEY: veritymesh-source
+      MINIO_SOURCE_SECRET_KEY: veritymesh-source-local-secret
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        set -eu;
+        mc alias set admin http://object-storage:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}";
+        mc mb --ignore-existing admin/veritymesh-source;
+        mc admin user info admin "$${MINIO_SOURCE_ACCESS_KEY}" >/dev/null 2>&1 ||
+        mc admin user add admin "$${MINIO_SOURCE_ACCESS_KEY}" "$${MINIO_SOURCE_SECRET_KEY}";
+        mc admin policy info admin veritymesh-source-access >/dev/null 2>&1 ||
+        mc admin policy create admin veritymesh-source-access /config/source-policy.json;
+        mc admin policy attach admin veritymesh-source-access --user "$${MINIO_SOURCE_ACCESS_KEY}";
+        mc alias set source-user http://object-storage:9000 "$${MINIO_SOURCE_ACCESS_KEY}" "$${MINIO_SOURCE_SECRET_KEY}";
+        printf 'veritymesh-source-probe' | mc pipe source-user/veritymesh-source/source-zone/.init-probe;
+        test "$$(mc cat source-user/veritymesh-source/source-zone/.init-probe)" = 'veritymesh-source-probe';
+        mc rm admin/veritymesh-source/source-zone/.init-probe;
+    volumes:
+      - ./object-storage/source-policy.json:/config/source-policy.json:ro
+    restart: "no"
+
 volumes:
   mysql-data:
   postgres-data:

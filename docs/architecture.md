@@ -49,6 +49,7 @@ flowchart TB
     subgraph publishing["知识接入与发布链路"]
         direction TB
         kControl["platform-api · Knowledge Control<br/>接收上传、Push API 或治理操作"]
+        kSourceAdapter["platform-api · Source Storage Adapter<br/>AWS SDK S3-compatible API<br/>服务端 key / 预签名 PUT / HEAD + 流式 SHA-256"]
         kSource["OSS Source Zone<br/>保存源对象与不可变 Source Revision"]
         kSourceTx["MySQL<br/>提交 SourceRevision / Task State / Outbox Record"]
         kOutbox["platform-api · Transactional Outbox Publisher"]
@@ -74,7 +75,9 @@ flowchart TB
         kActiveState["platform-api Event Projector → MySQL<br/>单事务切换 Active Knowledge Release / Deployment Revision"]
         kView["portal-web<br/>展示发布成功、失败或可回滚状态"]
 
-        kControl -->|"写入隔离源区"| kSource
+        kControl -->|"创建上传预约"| kSourceAdapter
+        kSourceAdapter -->|"预签名 PUT 写入隔离源区"| kSource
+        kSource -->|"完成确认时 HEAD + 流式校验"| kSourceAdapter
         kSource -->|"源对象落盘后登记元数据"| kSourceTx
         kSourceTx -->|"只读取已提交记录"| kOutbox
         kOutbox --> kSourceEvent

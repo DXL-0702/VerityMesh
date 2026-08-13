@@ -2,8 +2,8 @@
 
 | 属性 | 内容 |
 | --- | --- |
-| 文档版本 | 3.3 |
-| 基线日期 | 2026-08-11 |
+| 文档版本 | 3.4 |
+| 基线日期 | 2026-08-14 |
 | 架构基线 | [`../tech-plan.md`](../tech-plan.md) |
 | 文档定位 | 整个项目技术栈总览，以及外部依赖的状态登记与下一决策索引 |
 
@@ -29,7 +29,7 @@
 | 层次 | 当前技术栈 | 关键边界 | 当前状态 |
 | --- | --- | --- | --- |
 | 前端体验层 | Node `24.19.0`、pnpm `10.33.0`、Vue `3.5.41`、TypeScript `5.9.3`、Vite `7.3.6` | `portal-web`、`assistant-ui` 和 TypeScript Client 共用 pnpm Workspace；不建设 React Adapter | 工程基线已冻结 |
-| Java 平台层 | Temurin OpenJDK `21.0.12+8`、Maven `3.9.16` + Wrapper `3.3.4`、Spring Boot `4.1.0`；MVC/Tomcat、WebClient、JPA/Hibernate/HikariCP、Security Resource Server/Nimbus、Flyway `12.4.0`、SpringDoc `3.1.0`、SLF4J/Logback | WebClient 只负责出站调用；不引入 WebFlux Server、JJWT 或 Knife4j | 工程基线已冻结；合同代码生成待 `P1-00` 验证 |
+| Java 平台层 | Temurin OpenJDK `21.0.12+8`、Maven `3.9.16` + Wrapper `3.3.4`、Spring Boot `4.1.0`；MVC/Tomcat、WebClient、JPA/Hibernate/HikariCP、Security Resource Server/Nimbus、Flyway `12.4.0`、SpringDoc `3.1.0`、SLF4J/Logback、AWS SDK for Java v2 S3 `2.31.78` | WebClient 只负责出站调用；S3 SDK 仅封装在 Source Storage Adapter 内；不引入 WebFlux Server、JJWT 或 Knife4j | 工程基线已冻结；合同代码生成待 `P1-00` 验证 |
 | 在线 AI 层 | Python `3.12.13`、uv `0.11.13`、FastAPI `0.139.0`、Pydantic `2.13.4`、Uvicorn `0.51.0` | 自研受约束 RAG Domain Kernel；第一阶段不使用 LangChain、LangGraph 或 MaxKB Runtime 持有领域边界 | 工程基线已冻结 |
 | 知识批处理层 | Python/uv、Celery `5.6.3`、SQLAlchemy `2.0.51`、Alembic `1.18.5`、psycopg `3.3.4`、pgvector Client `0.5.0` | 负责解析、Chunk、Embedding、批量投影和评测；不拥有业务状态机 | 工程基线已冻结 |
 | 数据与事件层 | MySQL、阿里云 OSS、Kafka、Redis Online、Redis Celery | MySQL 是 Java 业务权威库，OSS 是内容资产事实源，Kafka 是可重放领域事件；两类 Redis 隔离 | 技术方向已冻结，具体托管产品与版本仍有待定项 |

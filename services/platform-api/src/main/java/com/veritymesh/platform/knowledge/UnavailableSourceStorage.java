@@ -6,6 +6,11 @@ package com.veritymesh.platform.knowledge;
 public final class UnavailableSourceStorage implements SourceStorage {
 
     @Override
+    public String sourceZoneKey(String projectId, String sourceObjectId, String sourceRevisionId) {
+        throw new SourceStorageNotConfigured();
+    }
+
+    @Override
     public UploadReservation reserveUpload(String sourceZoneKey, String contentType, long contentLength) {
         throw new SourceStorageNotConfigured();
     }

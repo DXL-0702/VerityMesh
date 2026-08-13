@@ -68,6 +68,7 @@ flowchart TB
     validated -->|"platform-api 审计并代理 SSE"| entry
 
     subgraph publishing["知识接入与发布"]
+        sourceAdapter["platform-api Source Storage Adapter<br/>S3-compatible 预签名 PUT / HEAD + SHA-256"]
         source["OSS Source Zone<br/>原始文件与 Source Revision"]
         sourceState["MySQL<br/>元数据、任务状态与 Outbox"]
         events["Kafka<br/>可重放领域事件"]
@@ -83,6 +84,8 @@ flowchart TB
         gate["双投影联合准备门禁"]
         active["MySQL 原子切换<br/>Active Knowledge Release"]
 
+        sourceAdapter -->|"预签名 PUT 写入"| source
+        source -->|"完成确认时 HEAD + SHA-256 校验"| sourceAdapter
         source --> sourceState
         sourceState --> events
         events --> worker
@@ -100,7 +103,7 @@ flowchart TB
         gate --> active
     end
 
-    api -->|"上传、治理、发布"| source
+    api -->|"上传、治理、发布"| sourceAdapter
     active -.->|"固定在线请求使用的 Release"| context
     bm25Projection -.->|"Active Release 选中"| bm25
     vectorProjection -.->|"Active Release 选中"| vector
