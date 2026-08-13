@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:veritymesh:contracts:internal:project-execution-context:1.0",
+  "$defs": {
+    "AccessSegment": {
+      "description": "Access segment resolved by the Java authorization authority.",
+      "enum": [
+        "PUBLIC",
+        "PLATFORM_AUTHENTICATED",
+        "PROJECT_AUTHORIZED"
+      ],
+      "title": "AccessSegment",
+      "type": "string"
+    },
+    "AuditContext": {
+      "additionalProperties": false,
+      "description": "Correlation identifiers required on every online AI execution.",
+      "properties": {
+        "request_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^\\S+$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^\\S+$",
+          "title": "Trace Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "trace_id",
+        "request_id"
+      ],
+      "title": "AuditContext",
+      "type": "object"
+    },
+    "SubjectKind": {
+      "description": "Kinds of subjects that may own an assistant execution.",
+      "enum": [
+        "GUEST",
+        "USER",
+        "SERVICE"
+      ],
+      "title": "SubjectKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Server-created scope that constrains one project execution.",
+  "properties": {
+    "access_context_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Access Context Hash",
+      "type": "string"
+    },
+    "access_segment": {
+      "$ref": "#/$defs/AccessSegment"
+    },
+    "assistant_profile_version_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Assistant Profile Version Id",
+      "type": "string"
+    },
+    "audit": {
+      "$ref": "#/$defs/AuditContext"
+    },
+    "authz_epoch": {
+      "minimum": 0,
+      "title": "Authz Epoch",
+      "type": "integer"
+    },
+    "client_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Client Id",
+      "type": "string"
+    },
+    "deadline_at": {
+      "format": "date-time",
+      "title": "Deadline At",
+      "type": "string"
+    },
+    "deployment_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Deployment Id",
+      "type": "string"
+    },
+    "deployment_revision_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Deployment Revision Id",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "issued_at": {
+      "format": "date-time",
+      "title": "Issued At",
+      "type": "string"
+    },
+    "knowledge_binding_set_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Knowledge Binding Set Id",
+      "type": "string"
+    },
+    "knowledge_release_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Knowledge Release Id",
+      "type": "string"
+    },
+    "locale": {
+      "maxLength": 64,
+      "minLength": 2,
+      "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$",
+      "title": "Locale",
+      "type": "string"
+    },
+    "message_execution_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Message Execution Id",
+      "type": "string"
+    },
+    "project_execution_binding_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Project Execution Binding Id",
+      "type": "string"
+    },
+    "project_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "project_version": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Project Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subject_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "title": "Subject Id",
+      "type": "string"
+    },
+    "subject_kind": {
+      "$ref": "#/$defs/SubjectKind"
+    }
+  },
+  "required": [
+    "schema_version",
+    "message_execution_id",
+    "subject_kind",
+    "subject_id",
+    "client_id",
+    "deployment_id",
+    "deployment_revision_id",
+    "assistant_profile_version_id",
+    "knowledge_binding_set_id",
+    "project_execution_binding_id",
+    "project_id",
+    "project_version",
+    "locale",
+    "access_segment",
+    "access_context_hash",
+    "knowledge_release_id",
+    "authz_epoch",
+    "issued_at",
+    "expires_at",
+    "deadline_at",
+    "audit"
+  ],
+  "title": "ProjectExecutionContext",
+  "type": "object"
+}

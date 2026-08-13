@@ -47,6 +47,8 @@ REQUIRED_PATHS = (
     Path("packages/typescript-client/package.json"),
     Path("packages/typescript-client/README.md"),
     Path("contracts/README.md"),
+    Path("contracts/internal/v1/project-execution-context.schema.json"),
+    Path("contracts/internal/v1/examples/project-execution-context.valid.json"),
     Path("infra/README.md"),
     Path("tests/README.md"),
     Path("docs/README.md"),
