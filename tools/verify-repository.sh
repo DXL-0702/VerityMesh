@@ -20,6 +20,12 @@ export UV_NO_PROGRESS=1
 uv run --no-project --offline --no-cache \
     python3 "$repo_root/tools/check_repository.py"
 
+uv run --frozen --directory "$repo_root/services/batch-worker" \
+    alembic upgrade head --sql >/dev/null
+
+uv run --frozen --directory "$repo_root" \
+    pytest services/batch-worker/tests/test_source_revision_contract.py -q
+
 (
     cd "$repo_root/tools/text-retrieval-poc"
     PYTHONPATH=src uv run --no-project --offline --no-cache \

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:veritymesh:contracts:sse:assistant-event:1.0",
+  "title": "AssistantEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "event_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "execution_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "event_type": {
+      "enum": [
+        "routing",
+        "project_switch",
+        "revision_available",
+        "session_replaced",
+        "claim_validated",
+        "message_delta",
+        "citation",
+        "finish",
+        "error"
+      ]
+    },
+    "payload": { "type": "object", "additionalProperties": true }
+  },
+  "required": ["schema_version", "event_id", "sequence", "execution_id", "event_type", "payload"]
+}

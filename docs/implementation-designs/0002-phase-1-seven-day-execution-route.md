@@ -7,11 +7,11 @@
 | 计划范围 | 第一阶段 1A、1B、1C |
 | 计划周期 | 开工前检查全部通过后，连续 7 个自然日 |
 | 第 7 天输出 | 第一阶段开发完成，生成可部署、可回滚、可验证的待发布候选版本 |
-| 当前下一步 | 完成第 3 节“开工前检查”，全部通过后记录第 1 天开始日期 |
+| 当前下一步 | 先完成本地集成环境与真实数据库/消息/对象存储适配，再关闭第 3 节“开工前检查”；七天倒计时仍未开始 |
 | 详细范围与门禁 | [第一阶段执行方案](0001-phase-1-execution-plan.md) |
 | 工作区工具链 | [技术栈与外部选型总览](../technology-selection/technology-selection.md)；前端、Python 与 Java 工程基线已初始化 |
 | 架构依据 | [tech-plan.md](../tech-plan.md)、[architecture.md](../architecture.md) |
-| 最后更新 | 2026-08-11 |
+| 最后更新 | 2026-08-13 |
 
 ## 1. 先读懂这条路线
 
@@ -82,7 +82,17 @@
 
 通过规则只有一条：十项全部通过才开始计算七天。部分通过不等于已经开工。
 
-截至 2026-08-11，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化，但正式 Schema 和跨语言代码生成方式仍需在 `P1-00` 中验证后固定。因此“工具版本”检查尚未完整关闭，其他九类开工条件也未全部核验，项目状态继续保持 `NOT_STARTED`。
+截至 2026-08-13，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化；`P1-00` 已交付最小 Public OpenAPI、SSE envelope、SourceRevision Kafka Event、Celery JSON Task、统一错误/幂等字段，以及 Flyway/Alembic 首个迁移基线。`P1-01` 已建立 Java SourceRevision/Task/Outbox 领域骨架和上传完成后的内容元数据校验，Python Dispatcher 已通过严格合同测试；真实 OSS、MySQL、Kafka、Celery、PostgreSQL/pgvector 集成和跨语言代码生成方式仍未完成。因此十项开工条件尚未全部关闭，项目状态继续保持 `NOT_STARTED`，七天倒计时没有开始。
+
+当前已完成但不等于端到端完成的边界：
+
+```text
+已完成：合同文件 + 有效示例 + Python 消费测试
+已完成：Flyway MySQL V1 / Alembic pgvector V1 离线迁移基线
+已完成：Java 上传预约/完成校验/幂等与 Outbox 持久化骨架
+已完成：Python SourceRevisionSubmitted -> Celery JSON Task 转换
+未完成：OSS 实际上传、MySQL 实例执行、Kafka 发布、Celery Worker、Portal 页面和跨服务 E2E
+```
 
 ## 4. 七天总览
 

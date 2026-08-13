@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:veritymesh:contracts:common:idempotency:1.0",
+  "title": "IdempotencyContext",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256,
+      "pattern": "^\\S+$"
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^\\S+$"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^\\S+$"
+    }
+  },
+  "required": ["idempotency_key", "trace_id", "request_id"]
+}
