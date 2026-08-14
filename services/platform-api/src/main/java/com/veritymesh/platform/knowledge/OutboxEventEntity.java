@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "outbox_events")
@@ -60,5 +61,41 @@ public class OutboxEventEntity {
         this.idempotencyKey = idempotencyKey;
         this.payload = payload;
         this.occurredAt = occurredAt;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getAggregateId() {
+        return aggregateId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public String getPayload() {
+        return payload;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+
+    public Instant getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void markPublished(Instant publishedAt) {
+        this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt must not be null");
     }
 }

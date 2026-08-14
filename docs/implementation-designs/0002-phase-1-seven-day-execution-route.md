@@ -7,7 +7,7 @@
 | 计划范围 | 第一阶段 1A、1B、1C |
 | 计划周期 | 开工前检查全部通过后，连续 7 个自然日 |
 | 第 7 天输出 | 第一阶段开发完成，生成可部署、可回滚、可验证的待发布候选版本 |
-| 当前下一步 | 先完成本地集成环境与真实数据库/消息/对象存储适配，再关闭第 3 节“开工前检查”；七天倒计时仍未开始 |
+| 当前下一步 | 继续完成真实 MySQL 业务连接、Kafka Consumer/Celery Worker 与 PostgreSQL/pgvector 投影写入，再关闭第 3 节“开工前检查”；七天倒计时仍未开始 |
 | 详细范围与门禁 | [第一阶段执行方案](0001-phase-1-execution-plan.md) |
 | 工作区工具链 | [技术栈与外部选型总览](../technology-selection/technology-selection.md)；前端、Python 与 Java 工程基线已初始化 |
 | 架构依据 | [tech-plan.md](../tech-plan.md)、[architecture.md](../architecture.md) |
@@ -82,7 +82,7 @@
 
 通过规则只有一条：十项全部通过才开始计算七天。部分通过不等于已经开工。
 
-截至 2026-08-14，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化；`P1-00` 已交付最小 Public OpenAPI、SSE envelope、SourceRevision Kafka Event、Celery JSON Task、统一错误/幂等字段，以及 Flyway/Alembic 首个迁移基线。`P1-01` 已建立 Java SourceRevision/Task/Outbox 领域骨架、上传完成后的内容元数据校验和基于 AWS SDK for Java v2 的 S3-compatible Source Storage Adapter；Python Dispatcher 已通过严格合同测试；`infra/local` 已建立覆盖 MySQL、PostgreSQL/pgvector、Kafka、双 Redis、Elasticsearch 和 OSS 兼容存储的 Compose 定义、独立对象存储初始化 Job、独立 Migration Job 与验证脚本，但当前 Docker daemon 不可用，真实容器启动、MinIO 上传和迁移执行证据仍未形成。MySQL 业务连接、Kafka Outbox Publisher、Celery Worker、PostgreSQL/pgvector 投影写入和跨语言代码生成方式仍未完成。因此十项开工条件尚未全部关闭，项目状态继续保持 `NOT_STARTED`，七天倒计时没有开始。
+截至 2026-08-14，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化；`P1-00` 已交付最小 Public OpenAPI、SSE envelope、SourceRevision Kafka Event、Celery JSON Task、统一错误/幂等字段，以及 Flyway/Alembic 首个迁移基线。`P1-01` 已建立 Java SourceRevision/Task/Outbox 领域骨架、上传完成后的内容元数据校验、基于 AWS SDK for Java v2 的 S3-compatible Source Storage Adapter 和默认关闭的 Kafka Outbox Publisher；Python Dispatcher 已通过严格合同测试；`infra/local` 已建立覆盖 MySQL、PostgreSQL/pgvector、Kafka、双 Redis、Elasticsearch 和 OSS 兼容存储的 Compose 定义、独立对象存储初始化 Job、独立 Migration Job 与验证脚本，但当前 Docker daemon 不可用，真实容器启动、MinIO 上传和迁移执行证据仍未形成。MySQL 业务连接、Kafka Consumer、Celery Worker、PostgreSQL/pgvector 投影写入和跨语言代码生成方式仍未完成。因此十项开工条件尚未全部关闭，项目状态继续保持 `NOT_STARTED`，七天倒计时没有开始。
 
 当前已完成但不等于端到端完成的边界：
 
@@ -92,8 +92,9 @@
 已完成：本地 Compose 依赖、数据库身份边界、健康检查和重复迁移验证脚本
 已完成：Java 上传预约/完成校验/幂等与 Outbox 持久化骨架
 已完成：S3-compatible Source Storage Adapter、服务端 Source Zone key、MinIO bucket/最小对象身份初始化 Job
+已完成：Java Kafka Outbox Publisher 的至少一次发布与成功后 `published_at` 标记
 已完成：Python SourceRevisionSubmitted -> Celery JSON Task 转换
-未完成：本地容器实际启动证据、MinIO 实际上传、MySQL 业务连接、Kafka 发布、Celery Worker、Portal 页面和跨服务 E2E
+未完成：本地容器实际启动证据、MinIO 实际上传、MySQL 业务连接、Kafka Consumer、Celery Worker、Portal 页面和跨服务 E2E
 ```
 
 ## 4. 七天总览

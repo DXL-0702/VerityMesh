@@ -32,7 +32,10 @@ class PlatformApiToolchainTests {
         assertThat(properties)
                 .containsEntry("spring.main.web-application-type", "servlet")
                 .containsEntry("spring.jpa.open-in-view", "false")
-                .containsEntry("spring.flyway.enabled", "false");
+                .containsEntry("spring.flyway.enabled", "false")
+                .containsEntry(
+                        "veritymesh.outbox.publisher.enabled",
+                        "${VERITYMESH_OUTBOX_PUBLISHER_ENABLED:false}");
     }
 
     @Test
@@ -42,6 +45,9 @@ class PlatformApiToolchainTests {
                 .isTrue();
         assertThat(ClassUtils.isPresent(
                         "software.amazon.awssdk.services.s3.S3Client", CLASS_LOADER))
+                .isTrue();
+        assertThat(ClassUtils.isPresent(
+                        "org.apache.kafka.clients.producer.KafkaProducer", CLASS_LOADER))
                 .isTrue();
         assertThat(LoggerFactory.getILoggerFactory()).isInstanceOf(LoggerContext.class);
     }
