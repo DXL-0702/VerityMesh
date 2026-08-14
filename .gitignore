@@ -27,7 +27,7 @@ Thumbs.db
 .cache/
 tmp/
 
-# JavaScript / Vue
+# JavaScript / React
 node_modules/
 .pnpm-store/
 .npm/

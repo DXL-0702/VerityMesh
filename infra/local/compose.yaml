@@ -1,0 +1,195 @@
+name: veritymesh-local
+
+services:
+  mysql:
+    image: mysql:8.4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: veritymesh-root-local
+      MYSQL_DATABASE: veritymesh
+      MYSQL_USER: veritymesh_app
+      MYSQL_PASSWORD: veritymesh-app-local
+    ports:
+      - "13306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  platform-api-migration:
+    image: flyway/flyway:12.4.0
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command:
+      - -connectRetries=60
+      - -url=jdbc:mysql://mysql:3306/veritymesh?useSSL=false&allowPublicKeyRetrieval=true
+      - -user=veritymesh_migration
+      - -password=veritymesh-migration-local
+      - -locations=filesystem:/flyway/sql
+      - migrate
+    volumes:
+      - ../../services/platform-api/src/main/resources/db/migration:/flyway/sql:ro
+    restart: "no"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: veritymesh_migration
+      POSTGRES_PASSWORD: veritymesh-migration-local
+      POSTGRES_DB: veritymesh
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  batch-worker-migration:
+    build:
+      context: ../..
+      dockerfile: infra/local/postgres-migration.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VERITYMESH_VECTOR_DATABASE_URL: postgresql+psycopg://veritymesh_migration:veritymesh-migration-local@postgres:5432/veritymesh
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv run --frozen --directory services/batch-worker alembic upgrade head &&
+        uv run --frozen --directory services/batch-worker python -c
+        'import os, psycopg; conn = psycopg.connect(os.environ["VERITYMESH_VECTOR_DATABASE_URL"].replace("+psycopg", ""));
+        conn.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO veritymesh_app");
+        conn.execute("GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO veritymesh_app");
+        conn.commit(); conn.close()'
+    restart: "no"
+
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:19092,CONTROLLER://:29093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:19092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 1
+    ports:
+      - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis-online:
+    image: redis:7.4-alpine
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis-online-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis-celery:
+    image: redis:7.4-alpine
+    ports:
+      - "16380:6379"
+    volumes:
+      - redis-celery-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "19200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  object-storage:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: veritymesh-local
+      MINIO_ROOT_PASSWORD: veritymesh-local-secret
+    ports:
+      - "19000:9000"
+      - "19001:9001"
+    volumes:
+      - object-storage-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  object-storage-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      object-storage:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: veritymesh-local
+      MINIO_ROOT_PASSWORD: veritymesh-local-secret
+      MINIO_SOURCE_ACCESS_KEY: veritymesh-source
+      MINIO_SOURCE_SECRET_KEY: veritymesh-source-local-secret
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        set -eu;
+        mc alias set admin http://object-storage:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}";
+        mc mb --ignore-existing admin/veritymesh-source;
+        mc admin user info admin "$${MINIO_SOURCE_ACCESS_KEY}" >/dev/null 2>&1 ||
+        mc admin user add admin "$${MINIO_SOURCE_ACCESS_KEY}" "$${MINIO_SOURCE_SECRET_KEY}";
+        mc admin policy info admin veritymesh-source-access >/dev/null 2>&1 ||
+        mc admin policy create admin veritymesh-source-access /config/source-policy.json;
+        mc admin policy attach admin veritymesh-source-access --user "$${MINIO_SOURCE_ACCESS_KEY}";
+        mc alias set source-user http://object-storage:9000 "$${MINIO_SOURCE_ACCESS_KEY}" "$${MINIO_SOURCE_SECRET_KEY}";
+        printf 'veritymesh-source-probe' | mc pipe source-user/veritymesh-source/source-zone/.init-probe;
+        test "$$(mc cat source-user/veritymesh-source/source-zone/.init-probe)" = 'veritymesh-source-probe';
+        mc rm admin/veritymesh-source/source-zone/.init-probe;
+    volumes:
+      - ./object-storage/source-policy.json:/config/source-policy.json:ro
+    restart: "no"
+
+volumes:
+  mysql-data:
+  postgres-data:
+  redis-online-data:
+  redis-celery-data:
+  elasticsearch-data:
+  object-storage-data:

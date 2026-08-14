@@ -40,6 +40,9 @@ class PlatformApiToolchainTests {
         assertThat(ClassUtils.isPresent(
                         "org.springframework.security.oauth2.jwt.JwtDecoder", CLASS_LOADER))
                 .isTrue();
+        assertThat(ClassUtils.isPresent(
+                        "software.amazon.awssdk.services.s3.S3Client", CLASS_LOADER))
+                .isTrue();
         assertThat(LoggerFactory.getILoggerFactory()).isInstanceOf(LoggerContext.class);
     }
 

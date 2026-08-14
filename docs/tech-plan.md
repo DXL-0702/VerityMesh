@@ -42,7 +42,7 @@
 - 每个项目具有独立的 Assistant Profile、Knowledge Release、Project Thread 和 Memory。
 - 第一阶段使用 BM25 + Vector + RRF + Reranker 的混合 RAG；GraphRAG 作为后续按指标引入的检索模式。
 - RAG 编排由 Python `assistant-runtime` 内的受约束 Domain Kernel 承担；外部框架不得持有 Scope、Binding、Release、Revocation、Evidence、Citation 或 Grounding 控制权。
-- Vue 3 + TypeScript 提供门户、项目页、Web Component 和 TypeScript Client；第一阶段不提供 React Adapter。
+- React 19 + TypeScript 提供门户、项目页、Web Component 和 TypeScript Client；`assistant-ui` 以 React 组件作为唯一主实现，并直接注册 Web Component，不保留框架兼容层。
 - Java/Spring Boot `platform-api` 通过 MySQL 保存业务、身份、授权、Session、Release 和审计真相；Python 只承担在线 AI 与离线知识处理，不直接拥有权威业务状态。
 - MySQL 保存业务权威状态，OSS 保存原始、治理和不可变知识资产；PostgreSQL/pgvector 保存可重建 Vector Projection，阿里云 Elasticsearch 保存可重建 BM25 Projection。
 - 知识必须先治理再发布；普通更新通过新 Deployment Revision 原子激活，敏感内容通过 Revocation List 紧急阻断。
@@ -112,7 +112,7 @@
 
 - Web Component：框架无关的聊天组件。
 - TypeScript Client：管理 Session、Thread、消息、上下文和反馈。
-- Vue 3 Portal：直接复用 `assistant-ui` 核心组件和 TypeScript Client；第一阶段不建设其他框架 Adapter。
+- React Portal：直接复用 `assistant-ui` React 核心组件和 TypeScript Client；Web Component 由同一 React 实现发布，不建设额外框架 Adapter。
 - REST/OpenAPI：服务端和非 Web 客户端的事实契约。
 - SSE：路由、状态、已验证回答片段、Citation 和错误事件。
 
@@ -169,7 +169,7 @@ Global Session 显示“企业全部项目”或“涉及 N 个项目”。不�
 | 身份 | 统一 Identity Service + ProjectGrant/ABAC | 仅靠 OAuth Scope 表达业务权益 | 分离身份认证、Client 能力和项目业务权限 |
 | Memory | Global 偏好与 Project Conversation 分离 | 全局共享长期 Memory | 防止跨项目事实和权限上下文污染 |
 | 回答流 | Claim 缓冲、验证后再 SSE | 原始 Token 先流出再校验 | 未验证事实一旦输出无法可靠撤回 |
-| 开发运行时 | Vue 3 + TypeScript 前端；Java/Spring Boot 业务平台；Python AI Runtime/Worker | 单语言全栈或在 Java/Python 两侧重复领域规则 | 前端体验、业务事务与 AI/检索生态各自使用合适运行时，领域真相保持单一所有者 |
+| 开发运行时 | React 19 + TypeScript 前端；Java/Spring Boot 业务平台；Python AI Runtime/Worker | 单语言全栈或在 Java/Python 两侧重复领域规则 | 前端体验、业务事务与 AI/检索生态各自使用合适运行时，领域真相保持单一所有者 |
 | 服务拆分 | `portal-web`、`platform-api`、`assistant-runtime`、`batch-worker` 四个 Deployment；Java 内部保持模块化单体 | 一期全面微服务或 Java/Python 混合持有同一领域状态 | 保持扩缩容和故障边界，避免在首期引入无价值网络跳数与双重领域实现 |
 | 异步批处理 | MySQL Outbox + Kafka 负责可靠领域事件；Python Celery 负责任务执行 | 直接从 Java 写入 Celery Redis 私有消息，或将 Celery 作为业务状态机 | Kafka 可重放且与领域事件一致；Celery 适合 Python 批量并发、重试和任务编排 |
 | Redis 角色 | 在线缓存与 Celery Broker/短期 Result 逻辑隔离 | 共用同一淘汰、容量和权限边界的 Redis 命名空间 | 防止批任务堆积、淘汰策略和访问权限干扰在线 Session、撤回和限流 |
@@ -219,8 +219,8 @@ Global Session 显示“企业全部项目”或“涉及 N 个项目”。不�
 
 | 逻辑组件 | 职责 | 首期运行时与部署方式 |
 | --- | --- | --- |
-| `portal-web` | 企业门户、项目知识页和统一聊天 UI | Vue 3 + TypeScript + Vite Web 服务 |
-| `assistant-ui` | Web Component、Citation、范围和项目切换组件；TypeScript Client | Vue 3 `defineCustomElement` 与 TypeScript 构建包，不是独立 K8s 服务 |
+| `portal-web` | 企业门户、项目知识页和统一聊天 UI | React 19 + TypeScript + Vite Web 服务 |
+| `assistant-ui` | Web Component、Citation、范围和项目切换组件；TypeScript Client | React 组件与原生 Custom Elements 注册入口构建包，不是独立 K8s 服务 |
 | `platform-api` | `public-api`、`knowledge-control`、`identity-access`、Session/Thread、Release、审计与 Transactional Outbox | Java/Spring Boot 模块化单体；在线 API 服务 |
 | `assistant-runtime` | 在不可变 Project Execution Context 内执行 Scope、Router、QueryPlan、Evidence、受约束 RAG Domain Kernel、Citation、Grounding 与已验证 SSE 事件 | Python/FastAPI 在线 AI 服务，按请求/SSE 扩容；不直接写入权威业务状态 |
 | `model-access` | 逻辑模型、供应商路由、配额、审计、降级与 Provider Adapter | `assistant-runtime` 内 Python 模块；第一阶段使用原生 SDK/REST Adapter |
@@ -1088,7 +1088,7 @@ degradation_mode / error_code
 交付：
 
 - 企业门户、项目知识页和 Web SDK 复用同一 `assistant-ui` 核心能力。
-- Vue 3 Portal、Web Component、TypeScript SDK 和 REST/SSE API。
+- React 19 Portal、Web Component、TypeScript SDK 和 REST/SSE API。
 - 平台统一账号、Guest Session、三类 Access Segment 和 ProjectGrant。
 - 第一方 Cookie、跨站 OIDC SSO、Bootstrap Token 和 Session Access Token。
 - Project Session、项目 Memory、Conversation、收藏和反馈。

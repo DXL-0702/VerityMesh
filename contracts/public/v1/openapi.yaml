@@ -1,0 +1,207 @@
+openapi: 3.1.0
+info:
+  title: VerityMesh Platform API
+  version: 1.0.0
+  description: Public control-plane and assistant entry contracts.
+servers:
+  - url: /
+paths:
+  /v1/projects/{projectId}/source-revisions:
+    post:
+      operationId: createSourceRevisionUpload
+      summary: Create an isolated source upload reservation
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/TraceId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceRevisionUploadRequest'
+      responses:
+        '201':
+          description: Source revision accepted for upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceRevisionUploadResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Idempotency key conflicts with a different request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/tasks/{taskId}:
+    get:
+      operationId: getTaskStatus
+      summary: Read the server-owned processing task state
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/TraceId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Current task state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatusResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/source-revisions/{sourceRevisionId}/complete:
+    post:
+      operationId: completeSourceRevisionUpload
+      summary: Verify the uploaded object and enqueue processing
+      parameters:
+        - $ref: '#/components/parameters/SourceRevisionId'
+        - $ref: '#/components/parameters/TraceId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Source revision queued for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatusResponse'
+        '404':
+          description: Source revision not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Uploaded object metadata does not match the reservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '^\S+$'
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '^\S+$'
+    SourceRevisionId:
+      name: sourceRevisionId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '^\S+$'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 256
+        pattern: '^\S+$'
+    TraceId:
+      name: X-Trace-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '^\S+$'
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '^\S+$'
+  schemas:
+    SourceRevisionUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [filename, content_type, content_length, content_sha256]
+      properties:
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 512
+        content_type:
+          type: string
+          minLength: 1
+          maxLength: 256
+        content_length:
+          type: integer
+          minimum: 0
+        content_sha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+    SourceRevisionUploadResponse:
+      type: object
+      additionalProperties: false
+      required: [source_revision_id, source_object_id, task_id, upload_url, upload_expires_at]
+      properties:
+        source_revision_id: { type: string, minLength: 1 }
+        source_object_id: { type: string, minLength: 1 }
+        task_id: { type: string, minLength: 1 }
+        upload_url: { type: string, format: uri }
+        upload_expires_at: { type: string, format: date-time }
+    TaskStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [task_id, source_revision_id, status, updated_at]
+      properties:
+        task_id: { type: string, minLength: 1 }
+        source_revision_id: { type: string, minLength: 1 }
+        status:
+          type: string
+          enum: [PENDING_UPLOAD, QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        failure_code: { type: [string, 'null'] }
+        updated_at: { type: string, format: date-time }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, request_id, retryable]
+          properties:
+            code: { type: string, minLength: 2, maxLength: 128 }
+            message: { type: string, minLength: 1, maxLength: 512 }
+            request_id: { type: string, minLength: 1, maxLength: 256 }
+            retryable: { type: boolean }
+            details: { type: object, additionalProperties: true }

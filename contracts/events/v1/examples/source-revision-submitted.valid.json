@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "event_id": "evt-source-revision-1",
+  "event_type": "SourceRevisionSubmitted",
+  "occurred_at": "2026-08-13T08:00:00Z",
+  "trace_id": "trace-source-revision-1",
+  "request_id": "request-source-revision-1",
+  "idempotency_key": "idem-source-revision-0001",
+  "project_id": "project-1",
+  "source_object_id": "source-object-1",
+  "source_revision_id": "source-revision-1",
+  "source_zone_key": "source-zone/a33e35d302125bbd8e647043a4025b29f659aad51c4a80d6244a45fabcdcd235/source-object-1/source-revision-1",
+  "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "content_type": "application/pdf",
+  "content_length": 1024,
+  "deadline_at": "2026-08-13T08:05:00Z"
+}

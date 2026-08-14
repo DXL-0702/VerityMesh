@@ -3,7 +3,7 @@
 | 属性 | 内容 |
 | --- | --- |
 | 类型 | 独立 Web Deployment |
-| 技术边界 | Vue 3 + TypeScript + Vite |
+| 技术边界 | React 19 + TypeScript + Vite |
 | 当前状态 | Node/pnpm 工程基线已初始化；门户业务功能尚未实现 |
 
 本目录负责企业门户、项目知识页、知识治理与发布控制台，并复用 [`../../packages/assistant-ui/`](../../packages/assistant-ui/) 和 [`../../packages/typescript-client/`](../../packages/typescript-client/)。它不计算授权范围，也不允许客户端指定 Project Execution Context、Release、Access Segment 或模型。

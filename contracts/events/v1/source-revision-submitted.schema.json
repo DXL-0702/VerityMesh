@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:veritymesh:contracts:events:source-revision-submitted:1.0",
+  "title": "SourceRevisionSubmittedEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "event_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "event_type": { "const": "SourceRevisionSubmitted" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "trace_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "request_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "idempotency_key": { "type": "string", "minLength": 16, "maxLength": 256, "pattern": "^\\S+$" },
+    "project_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "source_object_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "source_revision_id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S+$" },
+    "source_zone_key": { "type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^\\S+$" },
+    "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "content_type": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "content_length": { "type": "integer", "minimum": 0 },
+    "deadline_at": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "occurred_at",
+    "trace_id",
+    "request_id",
+    "idempotency_key",
+    "project_id",
+    "source_object_id",
+    "source_revision_id",
+    "source_zone_key",
+    "content_sha256",
+    "content_type",
+    "content_length",
+    "deadline_at"
+  ]
+}

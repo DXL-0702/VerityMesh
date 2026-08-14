@@ -38,7 +38,7 @@
 - 不实现第二阶段的项目业务 API Connector、ToolPlan 或 Tool Executor。
 - 不实现第三阶段 GraphRAG、图数据库或跨项目混合图。
 - 不引入 LangChain 主 RAG、LangGraph 主 Workflow 或 MaxKB Runtime。
-- 不建设 React Adapter、原生移动 SDK、Flink、Milvus、Weaviate、Elasticsearch Dense Vector、私有模型生产链路或多地域灾备。
+- 不建设额外前端框架 Adapter、原生移动 SDK、Flink、Milvus、Weaviate、Elasticsearch Dense Vector、私有模型生产链路或多地域灾备。
 - 不把消费者会话、用户上传内容或未审批资料自动转为 Published Knowledge。
 - 不通过本实施方案替尚未完成的网关、身份、安全、解析、云产品或可观测性选型作出产品决定。
 
@@ -46,7 +46,7 @@
 
 | 层次 | 第一阶段所有者 | 固定运行时或形态 | 必须持有的职责 | 不得持有的职责 |
 | --- | --- | --- | --- | --- |
-| 前端体验层 | `portal-web`、`assistant-ui`、TypeScript Client | Vue 3 + TypeScript + Vite；Web Component | 门户、项目页、治理界面、会话状态、Citation、项目切换、Embed 和用户反馈 | 不计算授权范围，不允许客户端指定 Project Execution Context、Release、Access Segment 或模型 |
+| 前端体验层 | `portal-web`、`assistant-ui`、TypeScript Client | React 19 + TypeScript + Vite；React Web Component | 门户、项目页、治理界面、会话状态、Citation、项目切换、Embed 和用户反馈 | 不计算授权范围，不允许客户端指定 Project Execution Context、Release、Access Segment 或模型 |
 | Java 平台层 | `platform-api` | Java + Spring Boot 模块化单体 | Project、Identity、Grant、Session、Thread、Release、任务状态、审计、Transactional Outbox 和外部 API | 不复制检索、Evidence、Citation、Grounding 或 RAG Kernel 规则 |
 | 在线 AI 层 | `assistant-runtime` | Python + FastAPI + `uv` | 不可变 Execution Context Guard、Project/Global 查询计划、Elasticsearch BM25、pgvector Vector、RRF、Evidence、Prompt、模型访问、Grounding、Citation 和已验证事件 | 不直接修改 MySQL 权威状态，不接受客户端自造 Scope，不流出未验证模型 Token |
 | 知识批处理层 | `batch-worker` | Python + Celery + `uv` | Kafka 事件分发、扫描、解析、OCR、去重、Chunk、Embedding、OSS Artifact、BM25/Vector Staging、发布评测、准备和投影清理 | 不成为业务状态机，不决定审批和 Active Release 真相，不接受 Java 直接写入 Celery 私有协议 |
@@ -62,7 +62,7 @@
 | `services/platform-api/` | Java/Spring Boot 模块化单体；持有 MySQL/Flyway Migration |
 | `services/assistant-runtime/` | Python/FastAPI 在线 AI Runtime |
 | `services/batch-worker/` | Python/Celery 离线 Worker；持有 PostgreSQL/pgvector Alembic Migration |
-| `packages/assistant-ui/` | Vue UI 核心组件与 Web Component 构建包 |
+| `packages/assistant-ui/` | React UI 核心组件与 Web Component 构建包 |
 | `packages/typescript-client/` | OpenAPI Client、SSE 状态机与 Session/Thread API 构建包 |
 | `contracts/` | 跨语言 OpenAPI、SSE、Execution Context、Kafka、Celery、错误与评测 Schema |
 | `infra/` | 本地集成环境、ACK 资源、网络策略和两个独立 Migration Job；不复制服务拥有的 Migration |
@@ -101,8 +101,8 @@ portal-web
   -> Knowledge Governance / Release Console
 
 assistant-ui
-  -> Vue 3 Core Components
-  -> Vue Web Component
+  -> React Core Components
+  -> React-powered Web Component
 
 typescript-client
   -> OpenAPI Client
@@ -126,7 +126,7 @@ typescript-client
 - 实现 Portal Guest Session、平台登录、退出、身份过期、授权不足、Grant 撤销和重新认证状态。
 - 实现三个 Access Segment 的可见范围展示，但前端显示值只来自服务端响应，不能作为请求授权参数。
 - 实现 Conversation、Project Session、Project Thread、收藏、反馈和历史消息；读取历史时正确处理当前权限已收窄的 Claim 遮蔽。
-- 将 `assistant-ui` 发布为 Vue Web Component，提供精确 Origin 配置、Bootstrap Token 交换、内存内 Session Token 和 `postMessage` Origin 校验。
+- 将 `assistant-ui` 的 React 主实现发布为 Web Component，提供精确 Origin 配置、Bootstrap Token 交换、内存内 Session Token 和 `postMessage` Origin 校验。
 - TypeScript Client 实现 `createSession`、`refreshSession`、`sendMessage`、`selectProject`、`setContext`、`setLocale`、`resetSession`、`submitFeedback` 和 `destroy`。
 - 实现 SSE 断连、超时、重复事件和有界恢复；重连不得重复提交 Message 或越过 Session/Thread Version。
 

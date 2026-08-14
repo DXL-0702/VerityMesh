@@ -7,11 +7,11 @@
 | 计划范围 | 第一阶段 1A、1B、1C |
 | 计划周期 | 开工前检查全部通过后，连续 7 个自然日 |
 | 第 7 天输出 | 第一阶段开发完成，生成可部署、可回滚、可验证的待发布候选版本 |
-| 当前下一步 | 完成第 3 节“开工前检查”，全部通过后记录第 1 天开始日期 |
+| 当前下一步 | 先完成本地集成环境与真实数据库/消息/对象存储适配，再关闭第 3 节“开工前检查”；七天倒计时仍未开始 |
 | 详细范围与门禁 | [第一阶段执行方案](0001-phase-1-execution-plan.md) |
 | 工作区工具链 | [技术栈与外部选型总览](../technology-selection/technology-selection.md)；前端、Python 与 Java 工程基线已初始化 |
 | 架构依据 | [tech-plan.md](../tech-plan.md)、[architecture.md](../architecture.md) |
-| 最后更新 | 2026-08-11 |
+| 最后更新 | 2026-08-13 |
 
 ## 1. 先读懂这条路线
 
@@ -57,7 +57,7 @@
 | 层次 | 本阶段负责的工作 | 明确不负责的工作 |
 | --- | --- | --- |
 | 跨层接口与集成 | 维护 OpenAPI、SSE、Java 到 Python 的执行上下文、Kafka 事件、Celery 任务、统一错误和测试夹具 | 不在各服务之间口头约定未登记字段 |
-| 前端 | 企业门户、项目知识页、治理控制台、统一聊天组件、Vue Web Component 和 TypeScript Client | 不计算授权范围，不指定 Release、Access Segment 或模型 |
+| 前端 | 企业门户、项目知识页、治理控制台、统一聊天组件、React Web Component 和 TypeScript Client | 不计算授权范围，不指定 Release、Access Segment 或模型 |
 | Java 后端 | Project、Identity、Grant、Session、Thread、Release、任务状态、审计、Outbox 和公开 API | 不实现检索融合、Evidence、Grounding 或模型编排 |
 | 在线 AI | 项目范围校验、查询计划、Elasticsearch BM25、pgvector Vector、RRF、Reranker、Evidence、生成、Grounding、Citation 和跨项目路由 | 不修改 MySQL 权威业务状态，不接受客户端自造范围 |
 | 知识批处理 | 扫描、解析/OCR、去重、Chunk、Embedding、索引构建、发布评测、索引激活和删除传播 | 不决定审批结果，不保存 Release 或任务状态真相 |
@@ -82,7 +82,19 @@
 
 通过规则只有一条：十项全部通过才开始计算七天。部分通过不等于已经开工。
 
-截至 2026-08-11，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化，但正式 Schema 和跨语言代码生成方式仍需在 `P1-00` 中验证后固定。因此“工具版本”检查尚未完整关闭，其他九类开工条件也未全部核验，项目状态继续保持 `NOT_STARTED`。
+截至 2026-08-14，Node/pnpm、Python/uv 与 Java/Maven 工作区版本已经固定并初始化；`P1-00` 已交付最小 Public OpenAPI、SSE envelope、SourceRevision Kafka Event、Celery JSON Task、统一错误/幂等字段，以及 Flyway/Alembic 首个迁移基线。`P1-01` 已建立 Java SourceRevision/Task/Outbox 领域骨架、上传完成后的内容元数据校验和基于 AWS SDK for Java v2 的 S3-compatible Source Storage Adapter；Python Dispatcher 已通过严格合同测试；`infra/local` 已建立覆盖 MySQL、PostgreSQL/pgvector、Kafka、双 Redis、Elasticsearch 和 OSS 兼容存储的 Compose 定义、独立对象存储初始化 Job、独立 Migration Job 与验证脚本，但当前 Docker daemon 不可用，真实容器启动、MinIO 上传和迁移执行证据仍未形成。MySQL 业务连接、Kafka Outbox Publisher、Celery Worker、PostgreSQL/pgvector 投影写入和跨语言代码生成方式仍未完成。因此十项开工条件尚未全部关闭，项目状态继续保持 `NOT_STARTED`，七天倒计时没有开始。
+
+当前已完成但不等于端到端完成的边界：
+
+```text
+已完成：合同文件 + 有效示例 + Python 消费测试
+已完成：Flyway MySQL V1 / Alembic pgvector V1 离线迁移基线与独立 Migration Job 入口
+已完成：本地 Compose 依赖、数据库身份边界、健康检查和重复迁移验证脚本
+已完成：Java 上传预约/完成校验/幂等与 Outbox 持久化骨架
+已完成：S3-compatible Source Storage Adapter、服务端 Source Zone key、MinIO bucket/最小对象身份初始化 Job
+已完成：Python SourceRevisionSubmitted -> Celery JSON Task 转换
+未完成：本地容器实际启动证据、MinIO 实际上传、MySQL 业务连接、Kafka 发布、Celery Worker、Portal 页面和跨服务 E2E
+```
 
 ## 4. 七天总览
 
@@ -227,7 +239,7 @@
 | 层次 | 要做的事情 | 当天必须交付 |
 | --- | --- | --- |
 | 跨层接口与集成 | 定义 OIDC/Session、ProjectGrant、Bootstrap Token、Session Token、Thread、History、Favorite、Feedback 和 Embed 错误 | 身份、会话和 Embed 接口 v1 |
-| 前端 | 实现企业门户、Guest/Login、Conversation、History、Favorite、Feedback、Vue Web Component、TypeScript Client、Token 内存保存和 Origin 校验 | Portal 与可发布的前端接入包 |
+| 前端 | 实现企业门户、Guest/Login、Conversation、History、Favorite、Feedback、React Web Component、TypeScript Client、Token 内存保存和 Origin 校验 | Portal 与可发布的前端接入包 |
 | Java 后端 | 实现 OIDC Code + PKCE、第一方 Cookie、ProjectGrant/ABAC、三类 Access Segment、对象授权、Bootstrap JTI、防重放、Session/Thread 和撤权 | 身份、授权和会话闭环 |
 | 在线 AI | 重新校验 Subject、Client、Session、Binding、Release 和授权上下文；实现 Project Memory Key、Successor Session 和旧 Evidence 隔离 | 受身份和项目范围约束的问答 |
 | 知识批处理 | 将 Access Segment、Audience Policy、有效期和 Citation URL 投影到 Chunk；处理权限收窄 Tombstone | 三类访问范围的 Published Projection |
@@ -384,7 +396,7 @@
 
 | 层次 | 必须交付的产物 |
 | --- | --- |
-| 前端 | Portal、项目页、治理控制台、Assistant UI、Vue Web Component、TypeScript Client、组件测试和 E2E |
+| 前端 | Portal、项目页、治理控制台、Assistant UI、React Web Component、TypeScript Client、组件测试和 E2E |
 | Java 后端 | platform-api、MySQL/Flyway Migration、身份授权、Session/Thread、Knowledge/Release、Outbox、审计和测试 |
 | 在线 AI | FastAPI Runtime、受约束 RAG Kernel、Elasticsearch BM25 Adapter、pgvector Vector Adapter、Model Adapter、Project/Global 路由、Evidence/Citation/Grounding 和质量测试 |
 | 知识批处理 | Kafka Dispatcher、Celery Worker、Alembic Migration、解析/OCR、Chunk、OSS Manifest、Embedding、BM25/Vector 投影、评测、准备、撤回和恢复测试 |

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "event_id": "sse-event-1",
+  "sequence": 4,
+  "execution_id": "message-execution-1",
+  "event_type": "message_delta",
+  "payload": {
+    "claim_id": "claim-1",
+    "text": "这是经过证据验证的回答片段。",
+    "evidence_ids": ["evidence-1"],
+    "validation_status": "VALIDATED"
+  }
+}

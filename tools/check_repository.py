@@ -20,6 +20,7 @@ REQUIRED_PATHS = (
     Path(".node-version"),
     Path(".npmrc"),
     Path(".python-version"),
+    Path(".dockerignore"),
     Path("package.json"),
     Path("pnpm-workspace.yaml"),
     Path("pnpm-lock.yaml"),
@@ -37,19 +38,37 @@ REQUIRED_PATHS = (
     Path("services/platform-api/pom.xml"),
     Path("services/platform-api/src/main/java/com/veritymesh/platform/PlatformApiApplication.java"),
     Path("services/platform-api/src/main/resources/application.properties"),
+    Path("services/platform-api/src/main/resources/db/migration/V1__platform_baseline.sql"),
     Path("services/platform-api/src/test/java/com/veritymesh/platform/PlatformApiToolchainTests.java"),
     Path("services/assistant-runtime/pyproject.toml"),
     Path("services/assistant-runtime/README.md"),
     Path("services/batch-worker/pyproject.toml"),
     Path("services/batch-worker/README.md"),
+    Path("services/batch-worker/alembic.ini"),
+    Path("services/batch-worker/migrations/env.py"),
+    Path("services/batch-worker/migrations/versions/0001_vector_projection_baseline.py"),
     Path("packages/assistant-ui/package.json"),
     Path("packages/assistant-ui/README.md"),
     Path("packages/typescript-client/package.json"),
     Path("packages/typescript-client/README.md"),
     Path("contracts/README.md"),
+    Path("contracts/common/v1/error.schema.json"),
+    Path("contracts/common/v1/idempotency.schema.json"),
+    Path("contracts/events/v1/source-revision-submitted.schema.json"),
+    Path("contracts/events/v1/examples/source-revision-submitted.valid.json"),
     Path("contracts/internal/v1/project-execution-context.schema.json"),
     Path("contracts/internal/v1/examples/project-execution-context.valid.json"),
+    Path("contracts/public/v1/openapi.yaml"),
+    Path("contracts/sse/v1/assistant-event.schema.json"),
+    Path("contracts/sse/v1/examples/message-delta.valid.json"),
+    Path("contracts/tasks/v1/source-revision-processing.schema.json"),
+    Path("contracts/tasks/v1/examples/source-revision-processing.valid.json"),
     Path("infra/README.md"),
+    Path("infra/local/README.md"),
+    Path("infra/local/compose.yaml"),
+    Path("infra/local/postgres-migration.Dockerfile"),
+    Path("infra/local/mysql/init/001-users.sql"),
+    Path("infra/local/postgres/init/001-users.sql"),
     Path("tests/README.md"),
     Path("docs/README.md"),
     Path("docs/tech-plan.md"),
@@ -60,6 +79,7 @@ REQUIRED_PATHS = (
     Path("docs/poc-reports/README.md"),
     Path("docs/runbooks/README.md"),
     Path("tools/verify-repository.sh"),
+    Path("tools/verify-local-integration.sh"),
     Path("tools/verify-frontend.sh"),
     Path("tools/verify-java.sh"),
     Path("tools/verify-python.sh"),
@@ -209,9 +229,9 @@ def check_architecture() -> tuple[list[str], int, int]:
         return [f"{architecture_label}: expected one Mermaid block, found {len(blocks)}"], 0, 0
 
     body = blocks[0].group("body")
-    if "React" in body:
+    if "React" not in body:
         failures.append(
-            f"{architecture_label}: React is outside the frozen first-stage boundary"
+            f"{architecture_label}: React must be the frozen first-stage frontend implementation"
         )
 
     declarations: dict[str, int] = defaultdict(int)
