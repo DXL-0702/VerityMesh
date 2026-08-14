@@ -57,7 +57,7 @@
 | 层次 | 本阶段负责的工作 | 明确不负责的工作 |
 | --- | --- | --- |
 | 跨层接口与集成 | 维护 OpenAPI、SSE、Java 到 Python 的执行上下文、Kafka 事件、Celery 任务、统一错误和测试夹具 | 不在各服务之间口头约定未登记字段 |
-| 前端 | 企业门户、项目知识页、治理控制台、统一聊天组件、Vue Web Component 和 TypeScript Client | 不计算授权范围，不指定 Release、Access Segment 或模型 |
+| 前端 | 企业门户、项目知识页、治理控制台、统一聊天组件、React Web Component 和 TypeScript Client | 不计算授权范围，不指定 Release、Access Segment 或模型 |
 | Java 后端 | Project、Identity、Grant、Session、Thread、Release、任务状态、审计、Outbox 和公开 API | 不实现检索融合、Evidence、Grounding 或模型编排 |
 | 在线 AI | 项目范围校验、查询计划、Elasticsearch BM25、pgvector Vector、RRF、Reranker、Evidence、生成、Grounding、Citation 和跨项目路由 | 不修改 MySQL 权威业务状态，不接受客户端自造范围 |
 | 知识批处理 | 扫描、解析/OCR、去重、Chunk、Embedding、索引构建、发布评测、索引激活和删除传播 | 不决定审批结果，不保存 Release 或任务状态真相 |
@@ -239,7 +239,7 @@
 | 层次 | 要做的事情 | 当天必须交付 |
 | --- | --- | --- |
 | 跨层接口与集成 | 定义 OIDC/Session、ProjectGrant、Bootstrap Token、Session Token、Thread、History、Favorite、Feedback 和 Embed 错误 | 身份、会话和 Embed 接口 v1 |
-| 前端 | 实现企业门户、Guest/Login、Conversation、History、Favorite、Feedback、Vue Web Component、TypeScript Client、Token 内存保存和 Origin 校验 | Portal 与可发布的前端接入包 |
+| 前端 | 实现企业门户、Guest/Login、Conversation、History、Favorite、Feedback、React Web Component、TypeScript Client、Token 内存保存和 Origin 校验 | Portal 与可发布的前端接入包 |
 | Java 后端 | 实现 OIDC Code + PKCE、第一方 Cookie、ProjectGrant/ABAC、三类 Access Segment、对象授权、Bootstrap JTI、防重放、Session/Thread 和撤权 | 身份、授权和会话闭环 |
 | 在线 AI | 重新校验 Subject、Client、Session、Binding、Release 和授权上下文；实现 Project Memory Key、Successor Session 和旧 Evidence 隔离 | 受身份和项目范围约束的问答 |
 | 知识批处理 | 将 Access Segment、Audience Policy、有效期和 Citation URL 投影到 Chunk；处理权限收窄 Tombstone | 三类访问范围的 Published Projection |
@@ -396,7 +396,7 @@
 
 | 层次 | 必须交付的产物 |
 | --- | --- |
-| 前端 | Portal、项目页、治理控制台、Assistant UI、Vue Web Component、TypeScript Client、组件测试和 E2E |
+| 前端 | Portal、项目页、治理控制台、Assistant UI、React Web Component、TypeScript Client、组件测试和 E2E |
 | Java 后端 | platform-api、MySQL/Flyway Migration、身份授权、Session/Thread、Knowledge/Release、Outbox、审计和测试 |
 | 在线 AI | FastAPI Runtime、受约束 RAG Kernel、Elasticsearch BM25 Adapter、pgvector Vector Adapter、Model Adapter、Project/Global 路由、Evidence/Citation/Grounding 和质量测试 |
 | 知识批处理 | Kafka Dispatcher、Celery Worker、Alembic Migration、解析/OCR、Chunk、OSS Manifest、Embedding、BM25/Vector 投影、评测、准备、撤回和恢复测试 |

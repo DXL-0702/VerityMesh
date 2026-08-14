@@ -3,7 +3,7 @@
 ```mermaid
 flowchart TB
     user["平台用户<br/>消费者 / 内容人员 / 审批者 / 管理员"]
-    uiEntry["portal-web<br/>Vue 3 + TypeScript + Vite<br/>Portal / Project Page / Vue Web Component"]
+    uiEntry["portal-web<br/>React 19 + TypeScript + Vite<br/>Portal / Project Page / React Web Component"]
     publicGateway["Public API Gateway · 产品待选<br/>TLS / 基础认证 / 限流 / REST 与 SSE 转发"]
     apiEntry["platform-api · Java + Spring Boot<br/>Public API / Bootstrap Token / 统一审计入口"]
     interaction{"本次用户交互"}
@@ -27,7 +27,7 @@ flowchart TB
         qModels["Model Access / Provider Adapter<br/>Reranker / Generator / Grounding"]
         qValidation["assistant-runtime<br/>Claim Grounding / Citation / 内容门禁<br/>只产生 Validated Claim / Evidence-only / Refusal"]
         qProxy["platform-api → Public API Gateway<br/>记录 Message / Audit 并代理 Validated SSE"]
-        qView["portal-web / Vue Web Component<br/>展示答案、引用或拒答"]
+        qView["portal-web / React Web Component<br/>展示答案、引用或拒答"]
 
         qAccess --> qAuthority
         qAuthority --> qContext

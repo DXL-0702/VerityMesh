@@ -1,17 +1,17 @@
-import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react()],
   build: {
     lib: {
-      entry: 'src/index.ts',
+      entry: 'src/index.tsx',
       fileName: 'assistant-ui',
       formats: ['es'],
       name: 'VerityMeshAssistantUi',
     },
     rollupOptions: {
-      external: ['vue'],
+      external: ['react', 'react-dom', 'react-dom/client'],
     },
   },
 })

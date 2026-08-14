@@ -229,9 +229,9 @@ def check_architecture() -> tuple[list[str], int, int]:
         return [f"{architecture_label}: expected one Mermaid block, found {len(blocks)}"], 0, 0
 
     body = blocks[0].group("body")
-    if "React" in body:
+    if "React" not in body:
         failures.append(
-            f"{architecture_label}: React is outside the frozen first-stage boundary"
+            f"{architecture_label}: React must be the frozen first-stage frontend implementation"
         )
 
     declarations: dict[str, int] = defaultdict(int)

@@ -12,7 +12,7 @@
   "scripts": {
     "build": "pnpm --recursive --if-present run build",
     "dev:portal": "pnpm --filter @veritymesh/portal-web run dev",
-    "format:check": "prettier --check \".github/**/*.yml\" \"apps/portal-web/**/*.{css,html,json,ts,vue}\" \"packages/**/*.{json,ts,vue}\" \"*.{json,mjs,yaml}\" \"tsconfig.base.json\"",
+    "format:check": "prettier --check \".github/**/*.yml\" \"apps/portal-web/**/*.{css,html,json,ts,tsx}\" \"packages/**/*.{json,ts,tsx}\" \"*.{json,mjs,yaml}\" \"tsconfig.base.json\"",
     "lint": "eslint . --max-warnings 0",
     "test": "pnpm --recursive --if-present run test",
     "typecheck": "pnpm --recursive --if-present run typecheck",
@@ -22,7 +22,6 @@
     "@eslint/js": "catalog:",
     "@playwright/test": "catalog:",
     "eslint": "catalog:",
-    "eslint-plugin-vue": "catalog:",
     "globals": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",

@@ -28,7 +28,7 @@ VerityMesh 是面向单企业、多项目场景的知识治理与智能问答平
 | 能力域 | 第一阶段提供的能力 |
 | --- | --- |
 | 知识治理 | 上传、批量导入、签名 Push API、扫描、解析/OCR、去重、Chunk、Embedding、审批、发布评测、回滚、撤回和删除传播 |
-| 用户入口 | 企业统一门户、标准项目知识页、治理控制台、Vue Web Component、TypeScript Client、REST/OpenAPI 和 SSE |
+| 用户入口 | 企业统一门户、标准项目知识页、治理控制台、React Web Component、TypeScript Client、REST/OpenAPI 和 SSE |
 | 身份与隔离 | 匿名访问、平台统一登录、ProjectGrant、三类 Access Segment、Guest Session、OIDC、Bootstrap Token 和对象级授权 |
 | 单项目问答 | 固定 Project 与 Knowledge Release，执行混合检索、Evidence 生成、Citation、Grounding、拒答和反馈 |
 | 跨项目问答 | Global Router 只在用户有权访问的项目集合中路由，按项目查询后聚合 Evidence，并保留每条引用的项目归属 |
@@ -147,7 +147,7 @@ flowchart TB
 
 | 层次 | 组件与技术 | 主要职责 |
 | --- | --- | --- |
-| 前端体验层 | `portal-web`、`assistant-ui`；Vue 3 + TypeScript + Vite | 企业门户、项目页、治理界面、统一聊天 UI、Vue Web Component 和 TypeScript Client |
+| 前端体验层 | `portal-web`、`assistant-ui`；React 19 + TypeScript + Vite | 企业门户、项目页、治理界面、统一聊天 UI、React Web Component 和 TypeScript Client |
 | Java 平台层 | `platform-api`；Java 21 + Spring Boot 4.1 + Spring MVC/Tomcat + WebClient + JPA/Flyway | Project、Identity、Grant、Session、Thread、Release、任务状态、审计、Transactional Outbox 和公开 API |
 | 在线 AI 层 | `assistant-runtime`；Python + FastAPI + `uv` | Execution Context Guard、Project/Global 查询计划、混合检索、RAG Kernel、模型访问、Grounding、Citation 和已验证事件 |
 | 知识批处理层 | `batch-worker`；Python + Celery + `uv` | Kafka 事件分发、扫描、解析/OCR、去重、Chunk、Embedding、批量投影、评测、激活准备和删除传播 |
@@ -220,13 +220,13 @@ MySQL Schema 由 Java 仓库内的 Flyway 管理，PostgreSQL/pgvector Schema �
 ```text
 VerityMesh/
 |-- apps/
-|   `-- portal-web/              # Vue 3 门户与项目知识页 Deployment
+|   `-- portal-web/              # React 门户与项目知识页 Deployment
 |-- services/
 |   |-- platform-api/            # Java/Spring Boot 模块化单体
 |   |-- assistant-runtime/       # Python/FastAPI 在线 AI Runtime
 |   `-- batch-worker/            # Python/Celery 知识批处理 Worker
 |-- packages/
-|   |-- assistant-ui/            # Vue UI 与 Web Component
+|   |-- assistant-ui/            # React UI 与 Web Component
 |   `-- typescript-client/       # OpenAPI/SSE TypeScript Client
 |-- contracts/                   # 跨语言 OpenAPI、事件、任务与错误合同
 |-- infra/                       # 本地环境、ACK 资源与独立 Migration Job
